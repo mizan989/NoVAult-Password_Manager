@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  background-color: #FAFAFA;
+  color: #111113;
+  font-family: 'Inter', sans-serif;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+* {
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #ECECEC;
+  border-radius: 999px;
+}
+
+/* Password "decrypting" reveal effect */
+@keyframes decrypt-flicker {
+  0% { filter: blur(3px); opacity: 0.3; }
+  60% { filter: blur(1px); opacity: 0.8; }
+  100% { filter: blur(0); opacity: 1; }
+}
+.decrypt-reveal {
+  animation: decrypt-flicker 220ms ease-out;
+}

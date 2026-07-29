@@ -30,7 +30,9 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         isRefreshing = false;
-        window.location.href = "/login";
+        if (window.location.pathname !== "/login" && window.location.pathname !== "/") {
+          window.location.href = "/login";
+        }
         return Promise.reject(refreshError);
       }
     }

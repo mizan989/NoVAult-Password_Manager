@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: import.meta.env.PROD ? "https://novault-server.onrender.com/api" : "/api",
+  baseURL: import.meta.env.PROD ? "https://novault-mizan.onrender.com/api" : "/api",
   withCredentials: true,
 });
 

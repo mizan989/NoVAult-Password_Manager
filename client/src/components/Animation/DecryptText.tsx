@@ -23,7 +23,7 @@ export default function DecryptText({
 }: DecryptTextProps) {
   const [displayText, setDisplayText] = useState(text);
   const iterationRef = useRef(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!trigger) {

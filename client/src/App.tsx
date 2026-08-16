@@ -2,6 +2,9 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { VaultUnlockProvider } from "./hooks/useVaultUnlock";
+import { ToastProvider } from "./hooks/useToast";
+import SmoothScroll from "./components/Animation/SmoothScroll";
+import ToastContainer from "./components/UI/Toast";
 import { RequireUser, RequireVaultUnlock } from "./components/Auth/ProtectedRoute";
 import AppLayout from "./components/Layout/AppLayout";
 
@@ -21,45 +24,50 @@ export default function App() {
   return (
     <AuthProvider>
       <VaultUnlockProvider>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify-otp" element={<VerifyOtp />} />
+        <ToastProvider>
+          <SmoothScroll>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/verify-otp" element={<VerifyOtp />} />
 
-          <Route
-            path="/master-password"
-            element={
-              <RequireUser>
-                <MasterPassword />
-              </RequireUser>
-            }
-          />
-          <Route
-            path="/unlock"
-            element={
-              <RequireUser>
-                <Unlock />
-              </RequireUser>
-            }
-          />
+              <Route
+                path="/master-password"
+                element={
+                  <RequireUser>
+                    <MasterPassword />
+                  </RequireUser>
+                }
+              />
+              <Route
+                path="/unlock"
+                element={
+                  <RequireUser>
+                    <Unlock />
+                  </RequireUser>
+                }
+              />
 
-          <Route
-            element={
-              <RequireVaultUnlock>
-                <AppLayout />
-              </RequireVaultUnlock>
-            }
-          >
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/vault" element={<VaultPage type="password" />} />
-            <Route path="/notes" element={<Notes />} />
-            <Route path="/generator" element={<PasswordGenerator />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
+              <Route
+                element={
+                  <RequireVaultUnlock>
+                    <AppLayout />
+                  </RequireVaultUnlock>
+                }
+              >
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/vault" element={<VaultPage type="password" />} />
+                <Route path="/notes" element={<Notes />} />
+                <Route path="/generator" element={<PasswordGenerator />} />
+                <Route path="/settings" element={<Settings />} />
+              </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+            <ToastContainer />
+          </SmoothScroll>
+        </ToastProvider>
       </VaultUnlockProvider>
     </AuthProvider>
   );

@@ -25,8 +25,16 @@ export function RequireVaultUnlock({ children }: { children: React.ReactElement 
 
 function FullScreenLoader() {
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-vault-bg">
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-vault-accent border-t-transparent" />
+    <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
+      <div className="relative flex flex-col items-center gap-3">
+        <div className="relative flex h-14 w-14 items-center justify-center">
+          <div className="absolute inset-0 rounded-2xl bg-blue-100 animate-ping opacity-75" />
+          <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-white border border-blue-200 shadow-card">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+          </div>
+        </div>
+        <p className="text-xs font-semibold text-slate-500 font-mono">Securing Session...</p>
+      </div>
     </div>
   );
 }

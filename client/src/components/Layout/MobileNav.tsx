@@ -6,25 +6,25 @@ const links = [
   { to: "/dashboard", label: "Home", icon: LayoutGrid },
   { to: "/vault", label: "Passwords", icon: KeyRound },
   { to: "/notes", label: "Notes", icon: StickyNote },
-  { to: "/generator", label: "Generate", icon: Wand2 },
+  { to: "/generator", label: "Generator", icon: Wand2 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function MobileNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-20 flex md:hidden items-center justify-around border-t border-vault-border bg-vault-surface px-2 py-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 flex md:hidden items-center justify-around border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur-md shadow-lg">
       {links.map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}
           className={({ isActive }) =>
-            `flex flex-col items-center gap-1 rounded-xl px-3 py-1.5 text-[10px] transition-colors duration-250 ${
-              isActive ? "text-vault-accent" : "text-vault-muted"
+            `flex flex-col items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-medium transition-colors ${
+              isActive ? "text-vault-accent font-semibold" : "text-slate-500 hover:text-slate-900"
             }`
           }
         >
           <Icon className="h-5 w-5" />
-          {label}
+          <span>{label}</span>
         </NavLink>
       ))}
     </nav>

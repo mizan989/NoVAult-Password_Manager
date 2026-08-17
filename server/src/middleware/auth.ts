@@ -8,13 +8,16 @@ export interface AuthedRequest extends Request {
 
 export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
   try {
-    const token =
-      req.cookies?.accessToken ||
-      (req.headers.authorization?.startsWith("Bearer ")
-        ? req.headers.authorization.split(" ")[1]
-        : undefined);
+    const authHeader = req.headers.authorization;
+    let token = req.cookies?.accessToken;
 
-    if (!token) throw ApiError.unauthorized("No access token provided");
+    if (!token && authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+
+    if (!token) {
+      throw ApiError.unauthorized("No access token provided");
+    }
 
     const payload = verifyAccessToken(token);
     req.user = payload;

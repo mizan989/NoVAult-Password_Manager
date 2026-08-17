@@ -54,12 +54,34 @@ export function setVaultUnlockHeader(masterPassword: string | null) {
   }
 }
 
-// Auto-refresh the access token once on a 401, then retry the original request.
+// Public endpoints that should never trigger auto-refresh
+const PUBLIC_AUTH_ROUTES = [
+  "/auth/login",
+  "/auth/register",
+  "/auth/verify-otp",
+  "/auth/google",
+  "/auth/refresh",
+  "/auth/logout",
+];
+
+// Auto-refresh the access token once on a 401 for authenticated requests only.
 let isRefreshing = false;
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const originalRequest = error.config;
+    if (!originalRequest) return Promise.reject(error);
+
+    const isPublicAuthRoute = PUBLIC_AUTH_ROUTES.some((route) =>
+      originalRequest.url?.includes(route)
+    );
+
+    // If it's a login/register/google attempt that failed with 401, or there's no stored token,
+    // do not attempt refresh or redirect — let the UI handle the error.
+    if (isPublicAuthRoute || !getAuthToken()) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry && !isRefreshing) {
       originalRequest._retry = true;
       isRefreshing = true;
@@ -74,9 +96,6 @@ api.interceptors.response.use(
       } catch (refreshError) {
         isRefreshing = false;
         setAuthToken(null);
-        if (window.location.pathname !== "/login" && window.location.pathname !== "/") {
-          window.location.href = "/login";
-        }
         return Promise.reject(refreshError);
       }
     }

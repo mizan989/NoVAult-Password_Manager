@@ -47,6 +47,17 @@ app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser(env.cookieSecret));
 app.use(generalLimiter);
 
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    name: "NoVAult API",
+    status: "online",
+    message: "Zero-Knowledge Password Manager API is healthy and operational.",
+    version: "1.0.0",
+    healthCheck: "/health",
+  });
+});
+
 app.get("/health", (req, res) => {
   res.json({ success: true, message: "NoVAult API is running", timestamp: new Date() });
 });

@@ -28,7 +28,8 @@ export function verifyRefreshToken(token: string): AccessTokenPayload {
 
 export const cookieOptions = {
   httpOnly: true,
-  secure: true,
-  sameSite: "none" as const,
+  secure: env.isProd,
+  sameSite: (env.isProd ? "none" : "lax") as "none" | "lax",
   path: "/",
 };
+

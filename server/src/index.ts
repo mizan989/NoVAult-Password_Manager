@@ -13,10 +13,33 @@ import generatorRoutes from "./routes/generatorRoutes";
 
 const app = express();
 
+// Trust reverse proxy (required for Render, Heroku, etc. for accurate IP rate limiting)
+app.set("trust proxy", 1);
+
 app.use(helmet());
+
+// Split comma-separated URLs and trim trailing slashes
+const allowedOrigins = env.clientUrl
+  .split(",")
+  .map((u) => u.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: env.clientUrl,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+      const cleanOrigin = origin.replace(/\/$/, "");
+      if (
+        allowedOrigins.includes(cleanOrigin) ||
+        allowedOrigins.includes("*") ||
+        cleanOrigin.endsWith(".vercel.app") ||
+        (!env.isProd && (cleanOrigin.includes("localhost") || cleanOrigin.includes("127.0.0.1")))
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );

@@ -11,7 +11,7 @@ export const generalLimiter = rateLimit({
 
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10000,
+  max: env.isProd ? 50 : 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "Too many auth attempts, please slow down." },

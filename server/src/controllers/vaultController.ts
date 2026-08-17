@@ -2,8 +2,9 @@ import { Response } from "express";
 import { z } from "zod";
 import Vault from "../models/Vault";
 import User from "../models/User";
+import mongoose from "mongoose";
 import { encrypt, decrypt } from "../encryption/crypto";
-import { deriveEncryptionKey } from "../encryption/argon2";
+import { deriveEncryptionKey, verifyMasterPassword } from "../encryption/argon2";
 import { ApiError } from "../utils/ApiError";
 import { sendSuccess } from "../utils/ApiResponse";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -23,10 +24,18 @@ export const updateVaultItemSchema = z.object({
   data: z.record(z.any()).optional(),
 });
 
-/** Derive the user's AES key from the master password header + stored salt. */
+/** Derive the user's AES key after verifying the master password against stored hash. */
 async function getEncryptionKey(userId: string, masterPassword: string) {
   const user = await User.findById(userId).select("+masterPasswordSalt +masterPasswordHash");
-  if (!user?.masterPasswordSalt) throw ApiError.badRequest("Vault not initialized");
+  if (!user?.masterPasswordSalt || !user?.masterPasswordHash) {
+    throw ApiError.badRequest("Vault not initialized - please set a master password first");
+  }
+
+  const isValid = await verifyMasterPassword(user.masterPasswordHash, masterPassword);
+  if (!isValid) {
+    throw ApiError.unauthorized("Incorrect master password");
+  }
+
   return deriveEncryptionKey(masterPassword, user.masterPasswordSalt);
 }
 
@@ -35,12 +44,19 @@ function decryptItem(item: any, key: Buffer) {
     { ciphertext: item.ciphertext, iv: item.iv, authTag: item.authTag },
     key
   );
+  let parsedData = {};
+  try {
+    parsedData = JSON.parse(json);
+  } catch (err) {
+    console.error(`[NoVAult] Corrupted JSON data in vault item ${item._id}`);
+  }
+
   return {
     id: item._id,
     type: item.type,
     category: item.category,
     favourite: item.favourite,
-    data: JSON.parse(json),
+    data: parsedData,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
@@ -111,6 +127,10 @@ export const createVaultItem = asyncHandler(async (req: AuthedRequest, res: Resp
 });
 
 export const updateVaultItem = asyncHandler(async (req: AuthedRequest, res: Response) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    throw ApiError.badRequest("Invalid vault item ID");
+  }
+
   const masterPassword = req.headers["x-master-password"] as string;
   const key = await getEncryptionKey(req.user!.userId, masterPassword);
 
@@ -141,6 +161,10 @@ export const updateVaultItem = asyncHandler(async (req: AuthedRequest, res: Resp
 });
 
 export const deleteVaultItem = asyncHandler(async (req: AuthedRequest, res: Response) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    throw ApiError.badRequest("Invalid vault item ID");
+  }
+
   const item = await Vault.findOneAndDelete({
     _id: req.params.id,
     userId: req.user!.userId,

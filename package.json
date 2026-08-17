@@ -6,6 +6,8 @@
     "dev": "npm --prefix client run dev",
     "dev:client": "npm --prefix client run dev",
     "dev:server": "npm --prefix server run dev",
-    "build": "cd client && npm install && npm run build"
+    "build": "cd client && npm install && npm run build",
+    "build:server": "cd server && npm install && npm run build",
+    "start:server": "cd server && npm start"
   }
 }

@@ -30,10 +30,27 @@ export async function sendOtpEmail(to: string, code: string): Promise<void> {
     return;
   }
 
-  await resend.emails.send({
-    from: env.emailFrom,
-    to,
-    subject,
-    html,
-  });
+  try {
+    const { data, error } = await resend.emails.send({
+      from: env.emailFrom,
+      to,
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error(`[NoVAult][email-error] Failed to send OTP to ${to}:`, error);
+      // In development or if domain unverified, log code to console so testing is not blocked
+      if (!env.isProd) {
+        console.log(`[NoVAult][dev-otp-fallback] OTP for ${to}: ${code}`);
+      }
+    } else {
+      console.log(`[NoVAult][email-sent] OTP sent to ${to} (id: ${data?.id})`);
+    }
+  } catch (err) {
+    console.error(`[NoVAult][email-exception] Exception sending OTP to ${to}:`, err);
+    if (!env.isProd) {
+      console.log(`[NoVAult][dev-otp-fallback] OTP for ${to}: ${code}`);
+    }
+  }
 }

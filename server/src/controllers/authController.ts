@@ -22,23 +22,23 @@ const googleClient = new OAuth2Client(env.googleClientId);
 
 // ---------- Validation Schemas ----------
 export const registerSchema = z.object({
-  name: z.string().min(2).max(60),
-  email: z.string().email(),
+  name: z.string().min(2).max(60).trim(),
+  email: z.string().email().toLowerCase().trim(),
   password: z.string().min(8),
 });
 
 export const verifyOtpSchema = z.object({
-  email: z.string().email(),
-  code: z.string().length(6),
+  email: z.string().email().toLowerCase().trim(),
+  code: z.string().length(6).trim(),
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().toLowerCase().trim(),
   password: z.string().min(1),
 });
 
 export const googleAuthSchema = z.object({
-  idToken: z.string(),
+  idToken: z.string().min(1),
 });
 
 export const masterPasswordSchema = z.object({
@@ -50,7 +50,7 @@ export const verifyMasterPasswordSchema = z.object({
 });
 
 export const updateNameSchema = z.object({
-  name: z.string().min(2).max(60),
+  name: z.string().min(2).max(60).trim(),
 });
 
 // ---------- Helpers ----------
@@ -71,7 +71,8 @@ function issueSession(res: Response, userId: string, email: string) {
 
 /** Step 1 of email registration: create unverified user + send OTP */
 export const register = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, password } = req.body;
+  const email = (req.body.email as string).toLowerCase().trim();
 
   const existing = await User.findOne({ email });
   if (existing && existing.isEmailVerified) {
@@ -108,7 +109,8 @@ export const register = asyncHandler(async (req, res) => {
 
 /** Step 2 of email registration: verify OTP, mark email verified */
 export const verifyOtp = asyncHandler(async (req, res) => {
-  const { email, code } = req.body;
+  const code = (req.body.code as string).trim();
+  const email = (req.body.email as string).toLowerCase().trim();
 
   const otp = await OtpToken.findOne({ email, purpose: "register" }).sort({ createdAt: -1 });
   if (!otp) throw ApiError.badRequest("No verification code found. Please register again.");
@@ -140,7 +142,8 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
 /** Email + password login */
 export const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const password = req.body.password;
+  const email = (req.body.email as string).toLowerCase().trim();
 
   const user = await User.findOne({ email }).select("+passwordHash");
   if (!user || !user.passwordHash) {
@@ -168,19 +171,30 @@ export const login = asyncHandler(async (req, res) => {
 export const googleAuth = asyncHandler(async (req, res) => {
   const { idToken } = req.body;
 
-  const ticket = await googleClient.verifyIdToken({
-    idToken,
-    audience: env.googleClientId,
-  });
-  const payload = ticket.getPayload();
-  if (!payload?.email) throw ApiError.unauthorized("Invalid Google token");
+  if (!env.googleClientId) {
+    throw ApiError.badRequest("Google authentication is not configured on the server");
+  }
 
-  let user = await User.findOne({ email: payload.email });
+  let ticket;
+  try {
+    ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: env.googleClientId,
+    });
+  } catch (err) {
+    throw ApiError.unauthorized("Invalid or expired Google token");
+  }
+
+  const payload = ticket.getPayload();
+  if (!payload?.email) throw ApiError.unauthorized("Invalid Google token payload");
+
+  const email = payload.email.toLowerCase().trim();
+  let user = await User.findOne({ email });
 
   if (!user) {
     user = await User.create({
-      name: payload.name || payload.email.split("@")[0],
-      email: payload.email,
+      name: payload.name || email.split("@")[0],
+      email,
       provider: "google",
       googleId: payload.sub,
       isEmailVerified: true,
@@ -244,11 +258,22 @@ export const logout = asyncHandler(async (req, res) => {
 });
 
 export const refresh = asyncHandler(async (req, res) => {
-  const token = req.cookies?.refreshToken;
-  if (!token) throw ApiError.unauthorized("No refresh token");
+  const token = req.cookies?.refreshToken || req.body?.refreshToken;
+  if (!token) throw ApiError.unauthorized("No refresh token provided");
 
-  const payload = verifyRefreshToken(token);
-  const { accessToken } = issueSession(res, payload.userId, payload.email);
+  let payload;
+  try {
+    payload = verifyRefreshToken(token);
+  } catch (err) {
+    throw ApiError.unauthorized("Invalid or expired refresh token");
+  }
+
+  const user = await User.findById(payload.userId);
+  if (!user) {
+    throw ApiError.unauthorized("User account no longer exists");
+  }
+
+  const { accessToken } = issueSession(res, user.id, user.email);
 
   sendSuccess(res, { accessToken }, "Session refreshed");
 });

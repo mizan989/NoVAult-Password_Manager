@@ -1,8 +1,47 @@
 import axios from "axios";
 
+const TOKEN_KEY = "novault_access_token";
+
+export function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setAuthToken(token: string | null) {
+  try {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+      delete api.defaults.headers.common["Authorization"];
+    }
+  } catch {
+    // Ignore localStorage errors in private mode
+  }
+}
+
 export const api = axios.create({
   baseURL: import.meta.env.PROD ? "https://novault-mizan.onrender.com/api" : "/api",
   withCredentials: true,
+});
+
+// Initialize Authorization header from existing token
+const initialToken = getAuthToken();
+if (initialToken) {
+  api.defaults.headers.common["Authorization"] = `Bearer ${initialToken}`;
+}
+
+// Attach Authorization header and dynamic master password header to every request
+api.interceptors.request.use((config) => {
+  const token = getAuthToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 // Attach the derived master password (session-only, kept in memory - see useVaultUnlock)
@@ -25,11 +64,16 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
       try {
-        await api.post("/auth/refresh");
+        const { data } = await api.post("/auth/refresh");
+        if (data.data?.accessToken) {
+          setAuthToken(data.data.accessToken);
+          originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
+        }
         isRefreshing = false;
         return api(originalRequest);
       } catch (refreshError) {
         isRefreshing = false;
+        setAuthToken(null);
         if (window.location.pathname !== "/login" && window.location.pathname !== "/") {
           window.location.href = "/login";
         }

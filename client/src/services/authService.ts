@@ -1,4 +1,4 @@
-import { api } from "./api";
+import { api, setAuthToken } from "./api";
 import { User } from "../types";
 
 export const authService = {
@@ -9,17 +9,26 @@ export const authService = {
 
   async verifyOtp(email: string, code: string) {
     const { data } = await api.post("/auth/verify-otp", { email, code });
-    return data.data as { user: User };
+    if (data.data?.accessToken) {
+      setAuthToken(data.data.accessToken);
+    }
+    return data.data as { user: User; accessToken?: string };
   },
 
   async login(email: string, password: string) {
     const { data } = await api.post("/auth/login", { email, password });
-    return data.data as { user: User };
+    if (data.data?.accessToken) {
+      setAuthToken(data.data.accessToken);
+    }
+    return data.data as { user: User; accessToken?: string };
   },
 
   async googleAuth(idToken: string) {
     const { data } = await api.post("/auth/google", { idToken });
-    return data.data as { user: User };
+    if (data.data?.accessToken) {
+      setAuthToken(data.data.accessToken);
+    }
+    return data.data as { user: User; accessToken?: string };
   },
 
   async me() {
@@ -33,7 +42,11 @@ export const authService = {
   },
 
   async logout() {
-    await api.post("/auth/logout");
+    try {
+      await api.post("/auth/logout");
+    } finally {
+      setAuthToken(null);
+    }
   },
 
   async createMasterPassword(masterPassword: string) {

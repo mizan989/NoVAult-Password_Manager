@@ -22,11 +22,14 @@ export default function Landing() {
           </Link>
 
           <nav className="hidden sm:flex items-center gap-6 text-xs font-medium text-slate-600">
-            <a href="#crypto-simulator" className="hover:text-blue-600 transition-colors">
-              Crypto Engine
+            <a href="#how-it-works" className="hover:text-blue-600 transition-colors">
+              How it Works
             </a>
             <a href="#features" className="hover:text-blue-600 transition-colors">
               Features
+            </a>
+            <a href="#security" className="hover:text-blue-600 transition-colors">
+              Security
             </a>
             <Link to="/login" className="hover:text-blue-600 transition-colors">
               Sign in
@@ -54,10 +57,10 @@ export default function Landing() {
       {/* Main Landing Page Content */}
       <main className="flex-1">
         <HeroSection />
+        <CryptoSimulator />
         <div id="features">
           <BentoFeatures />
         </div>
-        <CryptoSimulator />
         <SecurityArchitecture />
 
         {/* Bottom CTA Banner */}
@@ -68,17 +71,17 @@ export default function Landing() {
                 <Lock className="h-6 w-6" />
               </div>
               <h2 className="font-heading text-2xl sm:text-4xl font-bold text-slate-900 mb-3">
-                Secure your digital realm today.
+                Secure your digital world today.
               </h2>
               <p className="mx-auto max-w-xl text-sm sm:text-base text-slate-600 mb-8 font-normal">
-                Create your zero-knowledge vault in seconds. Passwords and private notes encrypted locally with Argon2id + AES-256-GCM.
+                Create your free, zero-knowledge vault in seconds. Keep your passwords and private notes safe, organized, and accessible only by you.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <Link
                   to="/register"
                   className="rounded-xl bg-vault-accent px-8 py-3.5 text-sm font-semibold text-white shadow-glow hover:bg-vault-accentHover transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  Create Master Vault
+                  Create Free Vault
                 </Link>
                 <Link
                   to="/login"
@@ -106,7 +109,7 @@ export default function Landing() {
           </div>
 
           <div className="text-[11px] text-slate-400">
-            AES-256-GCM • Argon2id • Client Derivation
+            Zero-Knowledge • End-to-End Encrypted • Open Source
           </div>
         </div>
       </footer>

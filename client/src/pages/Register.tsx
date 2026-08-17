@@ -1,111 +1,60 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { ShieldCheck, ArrowRight, Lock, Mail, User as UserIcon, Eye, EyeOff } from "lucide-react";
-import Input from "../components/UI/Input";
-import Button from "../components/UI/Button";
+import { Link } from "react-router-dom";
+import { ShieldCheck, Lock, AlertCircle } from "lucide-react";
 import SpotlightCard from "../components/Animation/SpotlightCard";
-import { authService } from "../services/authService";
-import { scorePasswordStrength, strengthColor } from "../utils/passwordStrength";
+import GoogleAuthButton from "../components/Auth/GoogleAuthButton";
 
 export default function Register() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      await authService.register(name, email, password);
-      navigate("/verify-otp", { state: { email } });
-    } catch (err: any) {
-      setError(err?.response?.data?.message || "Registration failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const strength = password ? scorePasswordStrength(password) : null;
 
   return (
     <AuthShell
       title="Create Your Vault Account"
-      subtitle="Start protecting your digital assets with Zero-Knowledge encryption."
+      subtitle="Start protecting your passwords with Zero-Knowledge encryption."
     >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Input
-          label="Full Name"
-          placeholder="e.g. Satoshi Nakamoto"
-          leftIcon={<UserIcon className="h-4 w-4" />}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-
-        <Input
-          label="Email Address"
-          type="email"
-          placeholder="name@example.com"
-          leftIcon={<Mail className="h-4 w-4" />}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-
-        <div>
-          <Input
-            label="Account Password"
-            type={showPassword ? "text" : "password"}
-            placeholder="Minimum 8 characters"
-            leftIcon={<Lock className="h-4 w-4" />}
-            rightIcon={
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="text-slate-400 hover:text-slate-700"
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            }
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
-          />
-
-          {strength && (
-            <div className="mt-2">
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className={`h-full transition-all duration-300 ${strengthColor(strength.label)}`}
-                  style={{ width: `${(strength.score / 4) * 100}%` }}
-                />
-              </div>
-              <p className="mt-1 text-[11px] text-slate-500">
-                Password Strength: <span className="font-semibold text-slate-700">{strength.label}</span>
-              </p>
-            </div>
-          )}
-        </div>
-
-        {error && (
-          <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-600 font-medium">
-            {error}
+      {/* Notice Banner explaining OTP unavailability */}
+      <div className="rounded-xl border border-amber-200/90 bg-amber-50/90 p-3.5 mb-4 text-left">
+        <div className="flex items-start gap-2.5">
+          <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-xs font-semibold text-amber-950">
+              Email Sign-Up Temporarily Paused
+            </h4>
+            <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
+              Email OTP verification is offline for maintenance. Please use <span className="font-semibold text-amber-950">Google / Gmail</span> below to sign up and access your vault instantly.
+            </p>
           </div>
-        )}
+        </div>
+      </div>
 
-        <Button type="submit" loading={loading} className="w-full mt-2">
-          <span>Create Account</span>
-          <ArrowRight className="h-4 w-4 ml-1" />
-        </Button>
-      </form>
+      {/* Primary Google Auth Action */}
+      <div className="my-2">
+        <GoogleAuthButton
+          text="Sign up with Google / Gmail"
+          onError={(msg) => setError(msg)}
+        />
+      </div>
 
-      <p className="mt-6 text-center text-xs text-slate-500">
+      {error && (
+        <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-2.5 text-xs text-amber-800 font-medium text-center">
+          {error}
+        </div>
+      )}
+
+      {/* Security Assurance Features */}
+      <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 my-4 space-y-2 text-left">
+        <div className="flex items-center gap-2 text-xs text-slate-700">
+          <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span>Zero-Knowledge client-side encryption</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-slate-700">
+          <Lock className="h-4 w-4 text-blue-600 shrink-0" />
+          <span>Bank-grade AES-256 security</span>
+        </div>
+      </div>
+
+      {/* Bottom Sign in link */}
+      <p className="mt-3 text-center text-xs text-slate-600">
         Already have a vault?{" "}
         <Link to="/login" className="font-semibold text-blue-600 hover:underline">
           Sign in
@@ -125,35 +74,36 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-vault-bg px-4 py-12 selection:bg-blue-500 selection:text-white">
+    <div className="relative min-h-screen flex flex-col items-center justify-center bg-vault-bg px-4 py-4 sm:py-6 selection:bg-blue-500 selection:text-white">
       {/* Background ambient gradient glow */}
       <div className="pointer-events-none absolute inset-0 bg-mesh-light -z-10" />
 
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md my-auto">
         {/* Brand Header */}
-        <div className="text-center mb-6">
-          <Link to="/" className="inline-flex items-center gap-2 mb-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 shadow-sm">
-              <ShieldCheck className="h-6 w-6" />
+        <div className="text-center mb-4">
+          <Link to="/" className="inline-flex items-center gap-2 mb-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100 shadow-sm">
+              <ShieldCheck className="h-5 w-5" />
             </div>
-            <span className="font-heading text-xl font-bold tracking-tight text-slate-900">
+            <span className="font-heading text-lg font-bold tracking-tight text-slate-900">
               No<span className="text-vault-accent">VA</span>ult
             </span>
           </Link>
-          <h1 className="font-heading text-2xl font-bold text-slate-900">{title}</h1>
-          {subtitle && <p className="mt-1 text-xs text-slate-500 max-w-xs mx-auto">{subtitle}</p>}
+          <h1 className="font-heading text-xl sm:text-2xl font-bold text-slate-900">{title}</h1>
+          {subtitle && <p className="mt-0.5 text-xs text-slate-500 max-w-xs mx-auto">{subtitle}</p>}
         </div>
 
         {/* Card Shell */}
-        <SpotlightCard className="p-8 bg-white border-slate-200 shadow-card">
+        <SpotlightCard className="p-5 sm:p-6 bg-white border-slate-200 shadow-card">
           {children}
         </SpotlightCard>
 
         {/* Security Assurance footer */}
-        <p className="mt-6 text-center text-[11px] text-slate-400">
+        <p className="mt-3 text-center text-[11px] text-slate-400">
           Encrypted with Argon2id + AES-256-GCM • Zero-Knowledge
         </p>
       </div>
     </div>
   );
 }
+

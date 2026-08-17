@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Mail, CheckCircle, ArrowRight, RefreshCw } from "lucide-react";
 import Button from "../components/UI/Button";
 import { authService } from "../services/authService";
@@ -78,6 +78,14 @@ export default function VerifyOtp() {
       title="Verify Your Email"
       subtitle={`We sent a 6-digit code to ${email || "your email address"}`}
     >
+      <div className="rounded-xl border border-amber-200/90 bg-amber-50/80 p-3.5 mb-4 text-xs text-amber-900 text-left">
+        <span className="font-semibold">Note:</span> If you did not receive a code, the OTP service is currently paused. Please{" "}
+        <Link to="/login" className="font-semibold text-blue-600 underline">
+          sign in with Google / Gmail
+        </Link>{" "}
+        for instant access.
+      </div>
+
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {/* 6 Digit Input Boxes */}
         <div className="flex justify-between gap-2 sm:gap-2.5 my-2" onPaste={handlePaste}>

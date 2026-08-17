@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 import Input from "../components/UI/Input";
 import Button from "../components/UI/Button";
+import GoogleAuthButton from "../components/Auth/GoogleAuthButton";
 import { authService } from "../services/authService";
 import { useAuth } from "../hooks/useAuth";
 import { AuthShell } from "./Register";
@@ -15,33 +16,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
-  const googleBtnRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // @ts-ignore
-    if (window.google && googleBtnRef.current) {
-      // @ts-ignore
-      window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-        callback: async (response: any) => {
-          try {
-            const { user } = await authService.googleAuth(response.credential);
-            await refreshUser();
-            navigate(user.hasMasterPassword ? "/unlock" : "/master-password");
-          } catch {
-            setError("Google sign-in failed. Please try again.");
-          }
-        },
-      });
-      // @ts-ignore
-      window.google.accounts.id.renderButton(googleBtnRef.current, {
-        theme: "outline",
-        size: "large",
-        width: 320,
-        shape: "pill",
-      });
-    }
-  }, [navigate, refreshUser]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +37,22 @@ export default function Login() {
       title="Welcome Back"
       subtitle="Authenticate to access your encrypted digital vault."
     >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {/* Primary Google Sign In Option */}
+      <div className="mb-3.5">
+        <GoogleAuthButton
+          text="Continue with Google / Gmail"
+          onError={(msg) => setError(msg)}
+        />
+      </div>
+
+      {/* Social Google Divider */}
+      <div className="my-3.5 flex items-center gap-3 text-xs text-slate-400">
+        <div className="h-px flex-1 bg-slate-200" />
+        <span>OR SIGN IN WITH EMAIL</span>
+        <div className="h-px flex-1 bg-slate-200" />
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
         <Input
           label="Email Address"
           type="email"
@@ -72,7 +61,6 @@ export default function Login() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          autoFocus
         />
 
         <Input
@@ -95,7 +83,7 @@ export default function Login() {
         />
 
         {error && (
-          <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-600 font-medium">
+          <div className="rounded-xl bg-rose-50 border border-rose-200 p-2.5 text-xs text-rose-600 font-medium">
             {error}
           </div>
         )}
@@ -106,16 +94,7 @@ export default function Login() {
         </Button>
       </form>
 
-      {/* Social Google Divider */}
-      <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
-        <div className="h-px flex-1 bg-slate-200" />
-        <span>OR</span>
-        <div className="h-px flex-1 bg-slate-200" />
-      </div>
-
-      <div ref={googleBtnRef} className="flex justify-center" />
-
-      <p className="mt-6 text-center text-xs text-slate-500">
+      <p className="mt-4 text-center text-xs text-slate-500">
         Don't have a vault yet?{" "}
         <Link to="/register" className="font-semibold text-blue-600 hover:underline">
           Create account

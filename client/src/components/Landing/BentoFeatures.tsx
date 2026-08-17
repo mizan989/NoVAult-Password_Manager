@@ -7,37 +7,37 @@ export default function BentoFeatures() {
   const features = [
     {
       icon: Lock,
-      title: "Argon2id Memory-Hard Key Derivation",
+      title: "Zero-Knowledge Privacy",
       description:
-        "Passkeys are derived using memory-hard Argon2id parameters resistant to GPU/ASIC brute-force cracking. The master password never touches disk storage.",
-      badge: "Quantum Resistant",
+        "Only you hold the key to your vault. Your master password is never sent to or stored on any server, ensuring complete digital confidentiality.",
+      badge: "100% Private",
       tagColor: "bg-blue-50 text-blue-700 border-blue-200",
       iconColor: "text-blue-600 bg-blue-50",
     },
     {
       icon: Shield,
-      title: "Authenticated AES-256-GCM Encryption",
+      title: "Bank-Grade Encryption",
       description:
-        "Every vault record is encrypted with a unique 96-bit initialization vector and a 128-bit authentication tag, making bit-flipping and tampering mathematically impossible.",
-      badge: "Military Grade",
+        "Every credential and private note is locked with industry-standard AES-256 encryption right on your device before syncing to the cloud.",
+      badge: "Bank-Grade Security",
       tagColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
       iconColor: "text-emerald-600 bg-emerald-50",
     },
     {
       icon: Eye,
-      title: "Matrix Decrypt on Demand",
+      title: "Instant Decrypt & Masking",
       description:
-        "Passwords remain masked in memory until you explicitly request a decrypt reveal. Enjoy smooth Matrix-style character unscramble and auto-clearing clipboards.",
-      badge: "Zero Leaks",
+        "Passwords remain safely hidden on screen until you choose to reveal them. Quickly copy secrets with auto-clearing clipboard protection.",
+      badge: "Peeking Protection",
       tagColor: "bg-indigo-50 text-indigo-700 border-indigo-200",
       iconColor: "text-indigo-600 bg-indigo-50",
     },
     {
       icon: Wand2,
-      title: "Entropy Studio & Generator",
+      title: "Smart Password Generator",
       description:
-        "Generate cryptographically strong passwords or memorable multi-word Diceware passphrases with live entropy scoring and crack time calculations.",
-      badge: "High Entropy",
+        "Generate unbreakable passwords or easy-to-remember multi-word passphrases with real-time strength and entropy feedback.",
+      badge: "Built-in Tool",
       tagColor: "bg-amber-50 text-amber-700 border-amber-200",
       iconColor: "text-amber-600 bg-amber-50",
     },
@@ -49,13 +49,13 @@ export default function BentoFeatures() {
         <div className="text-center max-w-2xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50/70 px-3.5 py-1 text-xs font-semibold text-blue-700 mb-3">
             <Fingerprint className="h-3.5 w-3.5" />
-            <span>Cryptographic Foundations</span>
+            <span>Built for Everyone</span>
           </div>
           <h2 className="font-heading text-3xl sm:text-4xl font-bold text-slate-900">
-            Engineered for Absolute Confidentiality
+            Security That Puts You in Full Control
           </h2>
           <p className="mt-3 text-sm sm:text-base text-slate-600">
-            NoVAult is architected so that even the creators of the software cannot view or decrypt your private data under any circumstances.
+            NoVAult is designed so that even our engineers cannot see or decrypt your passwords under any circumstances.
           </p>
         </div>
 

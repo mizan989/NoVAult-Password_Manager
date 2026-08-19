@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ShieldCheck, Lock, ArrowRight, Github, Heart } from "lucide-react";
+import { ShieldCheck, Lock, ArrowRight, Github, Instagram, Linkedin } from "lucide-react";
 import HeroSection from "../components/Landing/HeroSection";
 import CryptoSimulator from "../components/Landing/CryptoSimulator";
 import BentoFeatures from "../components/Landing/BentoFeatures";
@@ -96,16 +96,63 @@ export default function Landing() {
       </main>
 
       {/* Light Cyber-Vault Footer */}
-      <footer className="border-t border-slate-200 bg-white py-10 px-6 text-center text-xs text-slate-500">
-        <div className="mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-blue-600" />
-            <span className="font-semibold text-slate-800">NoVAult</span>
-            <span>— Zero-Knowledge Digital Security</span>
+      <footer className="border-t border-slate-200 bg-white py-10 px-6 text-slate-500">
+        <div className="mx-auto max-w-6xl flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-blue-600" />
+              <span className="font-semibold text-slate-800">NoVAult</span>
+            </div>
+            <span className="hidden sm:inline text-slate-300">•</span>
+            <span className="text-xs text-slate-500">
+              Built by <span className="font-semibold text-slate-800">Md Mizan</span>
+            </span>
           </div>
 
-          <div className="text-xs text-slate-500 flex items-center gap-1">
-            Built by <span className="font-semibold text-slate-800">Md Mizan</span> as a portfolio project.
+          {/* Social Links */}
+          <div className="flex items-center gap-2.5">
+            <a
+              href="https://github.com/mizan989"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GitHub"
+              title="GitHub"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition-all hover:border-slate-400 hover:bg-slate-100 hover:text-slate-900 hover:scale-105 active:scale-95"
+            >
+              <Github className="h-4 w-4" />
+            </a>
+            <a
+              href="https://www.instagram.com/mizanmohammadd"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram"
+              title="Instagram"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition-all hover:border-pink-300 hover:bg-pink-50 hover:text-pink-600 hover:scale-105 active:scale-95"
+            >
+              <Instagram className="h-4 w-4" />
+            </a>
+            <a
+              href="https://www.linkedin.com/in/mizann989/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="LinkedIn"
+              title="LinkedIn"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition-all hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 hover:scale-105 active:scale-95"
+            >
+              <Linkedin className="h-4 w-4" />
+            </a>
+            <a
+              href="https://x.com/mizanmohammadd"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="X"
+              title="X"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition-all hover:border-slate-400 hover:bg-slate-100 hover:text-slate-900 hover:scale-105 active:scale-95"
+            >
+              <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+            </a>
           </div>
 
           <div className="text-[11px] text-slate-400">

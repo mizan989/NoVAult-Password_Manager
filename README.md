@@ -1,4 +1,4 @@
-﻿# NoVAult — Zero-Knowledge Password Manager & Secure Vault
+# NoVAult — Zero-Knowledge Password Manager & Secure Vault
 
 [![Live Demo](https://img.shields.io/badge/demo-online-brightgreen.svg)](https://novault.vercel.app)
 [![React](https://img.shields.io/badge/React-18-blue?logo=react)](https://react.dev/)
@@ -126,3 +126,22 @@ cd client && npm run dev
 ```
 - Client: `http://localhost:5173`
 - Server: `http://localhost:5000`
+
+---
+
+## Backend Keep-Alive & Cold-Start Prevention
+
+### Why This is Needed
+The NoVAult backend API is hosted on **Render's Free Tier**. Under Render's free tier architecture:
+- Web services automatically spin down (sleep) after **15 minutes** of HTTP inactivity.
+- When an inactive server receives a request, it undergoes a **cold-start spin-up lasting 30–50+ seconds**, resulting in noticeable delays for initial login and vault load times.
+
+### How It Works
+To prevent sleep mode and eliminate cold-start latency, a scheduled GitHub Actions workflow ([`.github/workflows/keep-alive.yml`](.github/workflows/keep-alive.yml)) is configured:
+1. **Automated Cron Schedule (`*/10 * * * *`):** Triggers every 10 minutes—comfortably within Render's 15-minute inactivity window.
+2. **Lightweight Health Ping:** Sends a non-blocking HTTP `GET` request to `https://novault-mizan.onrender.com/health`.
+3. **Inactivity Timer Reset:** Each ping resets Render's idle countdown, keeping the container warm and immediately responsive 24/7.
+4. **Cold-Start Resilience & Diagnostics:** Includes a 60-second timeout (`--max-time 60`), 2 automated retries (`--retry 2`), and structured console logging reporting HTTP status codes and response times.
+
+> [!TIP]
+> Free external monitoring services like **[UptimeRobot](https://uptimerobot.com)** or **[Cron-job.org](https://cron-job.org)** can also be pointed to `https://novault-mizan.onrender.com/health` every 10 minutes as a standalone alternative without consuming GitHub Actions queue minutes.

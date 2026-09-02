@@ -53,6 +53,18 @@ export default function Register() {
         </div>
       </div>
 
+      {/* Legal terms agreement */}
+      <p className="mt-3 text-center text-[11px] text-slate-500 leading-relaxed">
+        By continuing, you agree to NoVAult's{" "}
+        <Link to="/terms" className="font-medium text-blue-600 hover:underline">
+          Terms of Service
+        </Link>{" "}
+        and{" "}
+        <Link to="/privacy" className="font-medium text-blue-600 hover:underline">
+          Privacy Policy
+        </Link>.
+      </p>
+
       {/* Bottom Sign in link */}
       <p className="mt-3 text-center text-xs text-slate-600">
         Already have a vault?{" "}
@@ -74,7 +86,7 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center bg-vault-bg px-4 py-4 sm:py-6 selection:bg-blue-500 selection:text-white">
+    <div className="relative min-h-screen flex flex-col items-center justify-center bg-vault-bg px-4 py-6 selection:bg-blue-500 selection:text-white">
       {/* Background ambient gradient glow */}
       <div className="pointer-events-none absolute inset-0 bg-mesh-light -z-10" />
 
@@ -98,10 +110,21 @@ export function AuthShell({
           {children}
         </SpotlightCard>
 
-        {/* Security Assurance footer */}
-        <p className="mt-3 text-center text-[11px] text-slate-400">
-          Encrypted with Argon2id + AES-256-GCM • Zero-Knowledge
-        </p>
+        {/* Security Assurance footer & Legal links */}
+        <div className="mt-4 text-center space-y-1.5">
+          <p className="text-[11px] text-slate-400">
+            Encrypted with Argon2id + AES-256-GCM • Zero-Knowledge
+          </p>
+          <div className="flex items-center justify-center gap-3 text-[11px] text-slate-400">
+            <Link to="/privacy" className="hover:text-blue-600 transition-colors">
+              Privacy Policy
+            </Link>
+            <span>•</span>
+            <Link to="/terms" className="hover:text-blue-600 transition-colors">
+              Terms of Service
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );

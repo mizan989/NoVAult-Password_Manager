@@ -19,6 +19,8 @@ import VaultPage from "./pages/Vault";
 import Notes from "./pages/Notes";
 import PasswordGenerator from "./pages/PasswordGenerator";
 import Settings from "./pages/Settings";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsAndConditions from "./pages/TermsAndConditions";
 
 export default function App() {
   return (
@@ -31,6 +33,8 @@ export default function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/verify-otp" element={<VerifyOtp />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsAndConditions />} />
 
               <Route
                 path="/master-password"

@@ -1,0 +1,24 @@
+name: Keep Render Alive
+
+on:
+  schedule:
+    # Render free tier sleeps after 15 minutes of HTTP inactivity.
+    # Running every 10 minutes keeps the server awake with a safe 5-minute cushion.
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping Health Endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          echo "Pinging NoVAult backend on Render..."
+          RESPONSE=$(curl -sS --max-time 60 --retry 2 -w "\nHTTP_STATUS:%{http_code}\nTIME_TOTAL:%{time_total}s" "https://novault-mizan.onrender.com/health" || true)
+          echo "$RESPONSE"
+          if echo "$RESPONSE" | grep -q "HTTP_STATUS:200"; then
+            echo "Server is healthy and awake!"
+          else
+            echo "Warning: Health check did not return 200 OK. Server may be spinning up or temporarily unreachable."
+          fi

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, Link } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import MobileNav from "./MobileNav";
@@ -41,11 +41,19 @@ export default function AppLayout() {
         <footer className="border-t border-vault-border bg-white px-6 py-4 text-center text-xs text-slate-500">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 max-w-6xl mx-auto">
             <span>
-              Built by <span className="font-semibold text-slate-800">Md Mizan</span> as a portfolio project.
+              Built by <span className="font-semibold text-slate-800">Md Mizan</span>
             </span>
-            <span className="text-[11px] text-slate-400">
-              Zero-Knowledge AES-256-GCM + Argon2id Client Engine
-            </span>
+            <div className="flex items-center gap-3 text-[11px] text-slate-400">
+              <span>Zero-Knowledge AES-256-GCM</span>
+              <span>•</span>
+              <Link to="/privacy" className="hover:text-blue-600 transition-colors">
+                Privacy Policy
+              </Link>
+              <span>•</span>
+              <Link to="/terms" className="hover:text-blue-600 transition-colors">
+                Terms of Service
+              </Link>
+            </div>
           </div>
         </footer>
         <MobileNav />

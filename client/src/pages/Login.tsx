@@ -40,7 +40,7 @@ export default function Login() {
       {/* Primary Google Sign In Option */}
       <div className="mb-3.5">
         <GoogleAuthButton
-          text="Continue with Google / Gmail"
+          text="Continue with Google"
           onError={(msg) => setError(msg)}
         />
       </div>

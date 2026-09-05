@@ -9,7 +9,7 @@ interface GoogleAuthButtonProps {
 }
 
 export default function GoogleAuthButton({
-  text = "Continue with Google / Gmail",
+  text = "Continue with Google",
   onError,
 }: GoogleAuthButtonProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -36,6 +36,7 @@ export default function GoogleAuthButton({
       // @ts-ignore
       if (window.google?.accounts?.id && containerRef.current) {
         try {
+          const containerWidth = containerRef.current.parentElement?.clientWidth || 360;
           // @ts-ignore
           window.google.accounts.id.initialize({
             client_id:
@@ -48,9 +49,9 @@ export default function GoogleAuthButton({
           window.google.accounts.id.renderButton(containerRef.current, {
             theme: "outline",
             size: "large",
-            width: 320,
+            width: Math.min(Math.max(containerWidth, 240), 400),
             text: "continue_with",
-            shape: "pill",
+            shape: "rectangular",
             logo_alignment: "left",
           });
           setRendered(true);
@@ -64,9 +65,7 @@ export default function GoogleAuthButton({
 
     if (!initGoogle()) {
       const interval = setInterval(() => {
-        if (initGoogle()) {
-          clearInterval(interval);
-        }
+        if (initGoogle()) clearInterval(interval);
       }, 200);
       const timer = setTimeout(() => clearInterval(interval), 5000);
       return () => {
@@ -94,15 +93,15 @@ export default function GoogleAuthButton({
         className={`w-full flex justify-center ${rendered ? "block" : "hidden"}`}
       />
 
-      {/* High-fidelity Fallback / Direct Action Button if GSI iframe is delayed or suppressed */}
+      {/* Minimalist Action / Fallback Button */}
       {!rendered && (
         <button
           type="button"
           onClick={handleManualPrompt}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-subtle hover:bg-slate-50 hover:border-slate-300 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60"
+          className="w-full flex items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors disabled:opacity-60"
         >
-          <svg className="h-5 w-5" viewBox="0 0 24 24">
+          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
             <path
               fill="#4285F4"
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -120,7 +119,7 @@ export default function GoogleAuthButton({
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
             />
           </svg>
-          <span>{loading ? "Authenticating with Google..." : text}</span>
+          <span>{loading ? "Authenticating..." : text}</span>
         </button>
       )}
     </div>

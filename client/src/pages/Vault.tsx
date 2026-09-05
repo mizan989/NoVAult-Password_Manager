@@ -1,18 +1,6 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Plus,
-  Search,
-  KeyRound,
-  StickyNote,
-  SlidersHorizontal,
-  LayoutGrid,
-  List,
-  Star,
-  Shield,
-  ArrowUpDown,
-  Filter,
-} from "lucide-react";
+import { Plus, Search, KeyRound, StickyNote, ArrowUpDown } from "lucide-react";
 import Button from "../components/UI/Button";
 import VaultItemCard from "../components/Vault/VaultItemCard";
 import AddVaultItemModal from "../components/Vault/AddVaultItemModal";
@@ -21,6 +9,7 @@ import { VaultItem, VaultItemType } from "../types";
 import { useToast } from "../hooks/useToast";
 
 const CATEGORIES = ["All", "General", "Personal", "Work", "Finance", "Social", "Development"];
+type SortOption = "updated" | "title" | "favourite";
 
 export default function VaultPage({ type = "password" }: { type?: VaultItemType }) {
   const [items, setItems] = useState<VaultItem[]>([]);
@@ -29,30 +18,25 @@ export default function VaultPage({ type = "password" }: { type?: VaultItemType 
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [sortBy, setSortBy] = useState<"updated" | "title" | "favourite">("updated");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortBy, setSortBy] = useState<SortOption>("updated");
   const { showToast } = useToast();
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await vaultService.list(type);
-      setItems(data);
+      setItems(await vaultService.list(type));
     } catch {
       setItems([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [type]);
 
   useEffect(() => {
     load();
-    // Listen for updates triggered by AppLayout
-    const handleUpdate = () => load();
-    window.addEventListener("vault-items-updated", handleUpdate);
-    return () => window.removeEventListener("vault-items-updated", handleUpdate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type]);
+    window.addEventListener("vault-items-updated", load);
+    return () => window.removeEventListener("vault-items-updated", load);
+  }, [load]);
 
   const handleSave = async (itemType: VaultItemType, category: string, data: Record<string, unknown>) => {
     if (editing) {
@@ -79,20 +63,22 @@ export default function VaultPage({ type = "password" }: { type?: VaultItemType 
 
   // Filter and Sort Pipeline
   const filteredAndSortedItems = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    const isCatAll = selectedCategory === "All";
+    const catLower = selectedCategory.toLowerCase();
+
     return items
       .filter((item) => {
-        const matchesCategory =
-          selectedCategory === "All" ||
-          (item.category && item.category.toLowerCase() === selectedCategory.toLowerCase());
+        const matchesCategory = isCatAll || item.category?.toLowerCase() === catLower;
+        if (!matchesCategory) return false;
+        if (!q) return true;
 
-        const q = searchQuery.toLowerCase();
-        const matchesSearch =
+        return (
           (item.data.title || "").toLowerCase().includes(q) ||
           (item.data.username || "").toLowerCase().includes(q) ||
           (item.data.url || "").toLowerCase().includes(q) ||
-          (item.category || "").toLowerCase().includes(q);
-
-        return matchesCategory && matchesSearch;
+          (item.category || "").toLowerCase().includes(q)
+        );
       })
       .sort((a, b) => {
         if (sortBy === "favourite") {
@@ -143,6 +129,7 @@ export default function VaultPage({ type = "password" }: { type?: VaultItemType 
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
+            aria-label={`Filter ${type === "password" ? "passwords" : "notes"}`}
             placeholder={`Filter ${type === "password" ? "passwords" : "notes"}...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -150,31 +137,35 @@ export default function VaultPage({ type = "password" }: { type?: VaultItemType 
           />
         </div>
 
-        {/* Sort & View Mode Controls */}
-        <div className="flex items-center gap-2">
-          {/* Sort Dropdown */}
-          <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/80 px-2.5 py-1.5 text-xs text-slate-600">
-            <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer"
-            >
-              <option value="updated">Recently Modified</option>
-              <option value="title">Alphabetical (A-Z)</option>
-              <option value="favourite">Favourites First</option>
-            </select>
-          </div>
+        {/* Sort Controls */}
+        <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/80 px-2.5 py-1.5 text-xs text-slate-600">
+          <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
+          <select
+            aria-label="Sort items"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+          >
+            <option value="updated">Recently Modified</option>
+            <option value="title">Alphabetical (A-Z)</option>
+            <option value="favourite">Favourites First</option>
+          </select>
         </div>
       </div>
 
       {/* Category Filter Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none">
+      <div
+        role="tablist"
+        aria-label="Category filters"
+        className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none"
+      >
         {CATEGORIES.map((cat) => {
           const isSelected = selectedCategory === cat;
           return (
             <button
               key={cat}
+              role="tab"
+              aria-selected={isSelected}
               onClick={() => setSelectedCategory(cat)}
               className={`rounded-xl px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
                 isSelected

@@ -140,11 +140,10 @@ export default function TermsAndConditions() {
                       key={sec.id}
                       href={`#${sec.id}`}
                       onClick={() => setActiveSection(sec.id)}
-                      className={`block rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
-                        activeSection === sec.id
+                      className={`block rounded-lg px-3 py-2 text-xs font-medium transition-colors ${activeSection === sec.id
                           ? "bg-blue-50 text-blue-600 font-semibold"
                           : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                      }`}
+                        }`}
                     >
                       {sec.title}
                     </a>

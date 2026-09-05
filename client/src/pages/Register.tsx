@@ -30,7 +30,7 @@ export default function Register() {
       {/* Primary Google Auth Action */}
       <div className="my-2">
         <GoogleAuthButton
-          text="Sign up with Google / Gmail"
+          text="Continue with Google"
           onError={(msg) => setError(msg)}
         />
       </div>

@@ -6,4 +6,4 @@ build/
 *.log
 .DS_Store
 *.tsbuildinfo
-
+.agents/

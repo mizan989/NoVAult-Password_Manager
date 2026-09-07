@@ -35,23 +35,26 @@ if (initialToken) {
   api.defaults.headers.common["Authorization"] = `Bearer ${initialToken}`;
 }
 
-// Attach Authorization header and dynamic master password header to every request
+let currentMasterPassword: string | null = null;
+
+// Attach Authorization header and dynamic master password header to requests
 api.interceptors.request.use((config) => {
   const token = getAuthToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Scope master password strictly to vault endpoints to prevent leaking to auth/generator/health
+  if (currentMasterPassword && config.url && config.url.includes("/vault")) {
+    config.headers["x-master-password"] = currentMasterPassword;
+  } else if (config.headers) {
+    delete config.headers["x-master-password"];
+  }
   return config;
 });
 
-// Attach the derived master password (session-only, kept in memory - see useVaultUnlock)
-// as a header for any vault request. This is set dynamically, never persisted to storage.
+// Update the in-memory master password for the current session
 export function setVaultUnlockHeader(masterPassword: string | null) {
-  if (masterPassword) {
-    api.defaults.headers.common["x-master-password"] = masterPassword;
-  } else {
-    delete api.defaults.headers.common["x-master-password"];
-  }
+  currentMasterPassword = masterPassword;
 }
 
 // Public endpoints that should never trigger auto-refresh

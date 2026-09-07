@@ -37,10 +37,9 @@ export function generatePassword(options: GeneratorOptions): string {
     throw new Error("At least one character set must be selected");
   }
 
-  const bytes = crypto.randomBytes(length);
   let result = "";
   for (let i = 0; i < length; i++) {
-    result += charset[bytes[i] % charset.length];
+    result += charset[crypto.randomInt(0, charset.length)];
   }
   return result;
 }

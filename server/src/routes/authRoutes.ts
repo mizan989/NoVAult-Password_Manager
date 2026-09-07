@@ -36,12 +36,14 @@ router.put("/me", requireAuth, validate(updateNameSchema), updateName);
 router.post(
   "/master-password",
   requireAuth,
+  authLimiter,
   validate(masterPasswordSchema),
   createMasterPassword
 );
 router.post(
   "/master-password/verify",
   requireAuth,
+  authLimiter,
   validate(verifyMasterPasswordSchema),
   verifyMasterPasswordController
 );

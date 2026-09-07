@@ -35,3 +35,22 @@ export const env = {
 
   isProd: process.env.NODE_ENV === "production",
 };
+
+if (env.isProd) {
+  const insecureDefaults = [
+    { key: "JWT_ACCESS_SECRET", val: env.jwtAccessSecret, defaultVal: "dev_access_secret_change_me" },
+    { key: "JWT_REFRESH_SECRET", val: env.jwtRefreshSecret, defaultVal: "dev_refresh_secret_change_me" },
+    { key: "COOKIE_SECRET", val: env.cookieSecret, defaultVal: "dev_cookie_secret_change_me" },
+    {
+      key: "ENCRYPTION_PEPPER",
+      val: env.encryptionPepper,
+      defaultVal: "0000000000000000000000000000000000000000000000000000000000",
+    },
+  ];
+
+  for (const item of insecureDefaults) {
+    if (!item.val || item.val === item.defaultVal) {
+      throw new Error(`[NoVAult Security] ${item.key} must be configured with a secure value in production.`);
+    }
+  }
+}

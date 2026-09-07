@@ -3,6 +3,7 @@ import { z } from "zod";
 import Vault from "../models/Vault";
 import User from "../models/User";
 import mongoose from "mongoose";
+import crypto from "crypto";
 import { encrypt, decrypt } from "../encryption/crypto";
 import { deriveEncryptionKey, verifyMasterPassword } from "../encryption/argon2";
 import { ApiError } from "../utils/ApiError";
@@ -24,8 +25,16 @@ export const updateVaultItemSchema = z.object({
   data: z.record(z.any()).optional(),
 });
 
+const keyCache = new Map<string, { key: Buffer; expiresAt: number }>();
+
 /** Derive the user's AES key after verifying the master password against stored hash. */
-async function getEncryptionKey(userId: string, masterPassword: string) {
+async function getEncryptionKey(userId: string, masterPassword: string): Promise<Buffer> {
+  const cacheKey = `${userId}:${crypto.createHash("sha256").update(masterPassword).digest("hex")}`;
+  const cached = keyCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.key;
+  }
+
   const user = await User.findById(userId).select("+masterPasswordSalt +masterPasswordHash");
   if (!user?.masterPasswordSalt || !user?.masterPasswordHash) {
     throw ApiError.badRequest("Vault not initialized - please set a master password first");
@@ -36,7 +45,18 @@ async function getEncryptionKey(userId: string, masterPassword: string) {
     throw ApiError.unauthorized("Incorrect master password");
   }
 
-  return deriveEncryptionKey(masterPassword, user.masterPasswordSalt);
+  const key = await deriveEncryptionKey(masterPassword, user.masterPasswordSalt);
+  // Cache derived key in RAM for 5 minutes to avoid event-loop exhaustion on frequent requests
+  keyCache.set(cacheKey, { key, expiresAt: Date.now() + 5 * 60 * 1000 });
+
+  if (keyCache.size > 500) {
+    const now = Date.now();
+    for (const [k, v] of keyCache.entries()) {
+      if (v.expiresAt <= now) keyCache.delete(k);
+    }
+  }
+
+  return key;
 }
 
 function decryptItem(item: any, key: Buffer) {
@@ -147,6 +167,9 @@ export const updateVaultItem = asyncHandler(async (req: AuthedRequest, res: Resp
       authTag: item.authTag,
       changedAt: new Date(),
     });
+    if (item.history.length > 10) {
+      item.history = item.history.slice(-10);
+    }
     const payload = encrypt(JSON.stringify(data), key);
     item.ciphertext = payload.ciphertext;
     item.iv = payload.iv;

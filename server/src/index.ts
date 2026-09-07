@@ -30,15 +30,14 @@ app.use(
       // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
       if (!origin) return callback(null, true);
       const cleanOrigin = origin.replace(/\/$/, "");
-      if (
-        allowedOrigins.includes(cleanOrigin) ||
-        allowedOrigins.includes("*") ||
-        cleanOrigin.endsWith(".vercel.app") ||
-        (!env.isProd && (cleanOrigin.includes("localhost") || cleanOrigin.includes("127.0.0.1")))
-      ) {
+      const isDevLocalhost =
+        !env.isProd &&
+        (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin));
+
+      if (allowedOrigins.includes(cleanOrigin) || isDevLocalhost) {
         return callback(null, true);
       }
-      return callback(null, true);
+      return callback(null, false);
     },
     credentials: true,
   })

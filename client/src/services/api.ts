@@ -1,26 +1,17 @@
 import axios from "axios";
 
-const TOKEN_KEY = "novault_access_token";
+let inMemoryAccessToken: string | null = null;
 
 export function getAuthToken(): string | null {
-  try {
-    return localStorage.getItem(TOKEN_KEY);
-  } catch {
-    return null;
-  }
+  return inMemoryAccessToken;
 }
 
 export function setAuthToken(token: string | null) {
-  try {
-    if (token) {
-      localStorage.setItem(TOKEN_KEY, token);
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    } else {
-      localStorage.removeItem(TOKEN_KEY);
-      delete api.defaults.headers.common["Authorization"];
-    }
-  } catch {
-    // Ignore localStorage errors in private mode
+  inMemoryAccessToken = token;
+  if (token) {
+    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common["Authorization"];
   }
 }
 
@@ -29,33 +20,14 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// Initialize Authorization header from existing token
-const initialToken = getAuthToken();
-if (initialToken) {
-  api.defaults.headers.common["Authorization"] = `Bearer ${initialToken}`;
-}
-
-let currentMasterPassword: string | null = null;
-
-// Attach Authorization header and dynamic master password header to requests
+// Attach Authorization header if token present in memory
 api.interceptors.request.use((config) => {
   const token = getAuthToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  // Scope master password strictly to vault endpoints to prevent leaking to auth/generator/health
-  if (currentMasterPassword && config.url && config.url.includes("/vault")) {
-    config.headers["x-master-password"] = currentMasterPassword;
-  } else if (config.headers) {
-    delete config.headers["x-master-password"];
-  }
   return config;
 });
-
-// Update the in-memory master password for the current session
-export function setVaultUnlockHeader(masterPassword: string | null) {
-  currentMasterPassword = masterPassword;
-}
 
 // Public endpoints that should never trigger auto-refresh
 const PUBLIC_AUTH_ROUTES = [
@@ -67,7 +39,7 @@ const PUBLIC_AUTH_ROUTES = [
   "/auth/logout",
 ];
 
-// Auto-refresh the access token once on a 401 for authenticated requests only.
+// Auto-refresh the access token once on a 401 for authenticated requests using HttpOnly cookie.
 let isRefreshing = false;
 api.interceptors.response.use(
   (res) => res,
@@ -79,9 +51,7 @@ api.interceptors.response.use(
       originalRequest.url?.includes(route)
     );
 
-    // If it's a login/register/google attempt that failed with 401, or there's no stored token,
-    // do not attempt refresh or redirect — let the UI handle the error.
-    if (isPublicAuthRoute || !getAuthToken()) {
+    if (isPublicAuthRoute) {
       return Promise.reject(error);
     }
 

@@ -1,11 +1,7 @@
 import { Response } from "express";
 import { z } from "zod";
 import Vault from "../models/Vault";
-import User from "../models/User";
 import mongoose from "mongoose";
-import crypto from "crypto";
-import { encrypt, decrypt } from "../encryption/crypto";
-import { deriveEncryptionKey, verifyMasterPassword } from "../encryption/argon2";
 import { ApiError } from "../utils/ApiError";
 import { sendSuccess } from "../utils/ApiResponse";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -15,135 +11,65 @@ export const createVaultItemSchema = z.object({
   type: z.enum(["password", "note", "card", "identity", "apikey"]),
   category: z.string().default("General"),
   favourite: z.boolean().default(false),
-  // Arbitrary item fields - shape depends on `type` (title, username, password, url, notes, etc.)
-  data: z.record(z.any()),
+  ciphertext: z.string().min(1),
+  iv: z.string().min(1),
+  authTag: z.string().min(1),
 });
 
 export const updateVaultItemSchema = z.object({
   category: z.string().optional(),
   favourite: z.boolean().optional(),
-  data: z.record(z.any()).optional(),
+  ciphertext: z.string().optional(),
+  iv: z.string().optional(),
+  authTag: z.string().optional(),
 });
 
-const keyCache = new Map<string, { key: Buffer; expiresAt: number }>();
-
-/** Derive the user's AES key after verifying the master password against stored hash. */
-async function getEncryptionKey(userId: string, masterPassword: string): Promise<Buffer> {
-  const cacheKey = `${userId}:${crypto.createHash("sha256").update(masterPassword).digest("hex")}`;
-  const cached = keyCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.key;
-  }
-
-  const user = await User.findById(userId).select("+masterPasswordSalt +masterPasswordHash");
-  if (!user?.masterPasswordSalt || !user?.masterPasswordHash) {
-    throw ApiError.badRequest("Vault not initialized - please set a master password first");
-  }
-
-  const isValid = await verifyMasterPassword(user.masterPasswordHash, masterPassword);
-  if (!isValid) {
-    throw ApiError.unauthorized("Incorrect master password");
-  }
-
-  const key = await deriveEncryptionKey(masterPassword, user.masterPasswordSalt);
-  // Cache derived key in RAM for 5 minutes to avoid event-loop exhaustion on frequent requests
-  keyCache.set(cacheKey, { key, expiresAt: Date.now() + 5 * 60 * 1000 });
-
-  if (keyCache.size > 500) {
-    const now = Date.now();
-    for (const [k, v] of keyCache.entries()) {
-      if (v.expiresAt <= now) keyCache.delete(k);
-    }
-  }
-
-  return key;
-}
-
-function decryptItem(item: any, key: Buffer) {
-  const json = decrypt(
-    { ciphertext: item.ciphertext, iv: item.iv, authTag: item.authTag },
-    key
-  );
-  let parsedData = {};
-  try {
-    parsedData = JSON.parse(json);
-  } catch (err) {
-    console.error(`[NoVAult] Corrupted JSON data in vault item ${item._id}`);
-  }
-
+function formatItem(item: any) {
   return {
     id: item._id,
     type: item.type,
     category: item.category,
     favourite: item.favourite,
-    data: parsedData,
+    ciphertext: item.ciphertext,
+    iv: item.iv,
+    authTag: item.authTag,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
 }
 
 export const listVaultItems = asyncHandler(async (req: AuthedRequest, res: Response) => {
-  const masterPassword = req.headers["x-master-password"] as string;
-  const key = await getEncryptionKey(req.user!.userId, masterPassword);
-
   const { type } = req.query;
   const filter: Record<string, unknown> = { userId: req.user!.userId };
   if (type) filter.type = type;
 
-  const items = await Vault.find(filter).sort({ updatedAt: -1 });
+  // Bound results to 100 per request to prevent resource exhaustion
+  const items = await Vault.find(filter).sort({ updatedAt: -1 }).limit(100);
 
-  let decrypted;
-  try {
-    decrypted = items.map((item) => decryptItem(item, key));
-  } catch {
-    throw ApiError.unauthorized("Incorrect master password");
-  }
-
-  sendSuccess(res, decrypted);
+  sendSuccess(res, items.map(formatItem));
 });
 
 export const searchVaultItems = asyncHandler(async (req: AuthedRequest, res: Response) => {
-  const masterPassword = req.headers["x-master-password"] as string;
-  const key = await getEncryptionKey(req.user!.userId, masterPassword);
-  const query = ((req.query.q as string) || "").toLowerCase();
-
-  const items = await Vault.find({ userId: req.user!.userId });
-
-  let decrypted;
-  try {
-    decrypted = items.map((item) => decryptItem(item, key));
-  } catch {
-    throw ApiError.unauthorized("Incorrect master password");
-  }
-
-  // Search happens after decryption, in-memory, per request - never indexed server-side
-  const results = decrypted.filter((item) => {
-    const haystack = JSON.stringify(item.data).toLowerCase() + item.category.toLowerCase();
-    return haystack.includes(query);
-  });
-
-  sendSuccess(res, results);
+  // In Zero-Knowledge architecture, search happens client-side; endpoint returns user's encrypted items
+  const items = await Vault.find({ userId: req.user!.userId }).sort({ updatedAt: -1 }).limit(100);
+  sendSuccess(res, items.map(formatItem));
 });
 
 export const createVaultItem = asyncHandler(async (req: AuthedRequest, res: Response) => {
-  const masterPassword = req.headers["x-master-password"] as string;
-  const key = await getEncryptionKey(req.user!.userId, masterPassword);
-
-  const { type, category, favourite, data } = req.body;
-  const payload = encrypt(JSON.stringify(data), key);
+  const { type, category, favourite, ciphertext, iv, authTag } = req.body;
 
   const item = await Vault.create({
     userId: req.user!.userId,
     type,
     category,
     favourite,
-    ciphertext: payload.ciphertext,
-    iv: payload.iv,
-    authTag: payload.authTag,
+    ciphertext,
+    iv,
+    authTag,
     history: [],
   });
 
-  sendSuccess(res, decryptItem(item, key), "Item created", 201);
+  sendSuccess(res, formatItem(item), "Item created", 201);
 });
 
 export const updateVaultItem = asyncHandler(async (req: AuthedRequest, res: Response) => {
@@ -151,15 +77,12 @@ export const updateVaultItem = asyncHandler(async (req: AuthedRequest, res: Resp
     throw ApiError.badRequest("Invalid vault item ID");
   }
 
-  const masterPassword = req.headers["x-master-password"] as string;
-  const key = await getEncryptionKey(req.user!.userId, masterPassword);
-
   const item = await Vault.findOne({ _id: req.params.id, userId: req.user!.userId });
   if (!item) throw ApiError.notFound("Vault item not found");
 
-  const { category, favourite, data } = req.body;
+  const { category, favourite, ciphertext, iv, authTag } = req.body;
 
-  if (data) {
+  if (ciphertext && iv && authTag) {
     // Preserve previous version in history before overwriting
     item.history.push({
       ciphertext: item.ciphertext,
@@ -170,17 +93,16 @@ export const updateVaultItem = asyncHandler(async (req: AuthedRequest, res: Resp
     if (item.history.length > 10) {
       item.history = item.history.slice(-10);
     }
-    const payload = encrypt(JSON.stringify(data), key);
-    item.ciphertext = payload.ciphertext;
-    item.iv = payload.iv;
-    item.authTag = payload.authTag;
+    item.ciphertext = ciphertext;
+    item.iv = iv;
+    item.authTag = authTag;
   }
   if (category !== undefined) item.category = category;
   if (favourite !== undefined) item.favourite = favourite;
 
   await item.save();
 
-  sendSuccess(res, decryptItem(item, key), "Item updated");
+  sendSuccess(res, formatItem(item), "Item updated");
 });
 
 export const deleteVaultItem = asyncHandler(async (req: AuthedRequest, res: Response) => {

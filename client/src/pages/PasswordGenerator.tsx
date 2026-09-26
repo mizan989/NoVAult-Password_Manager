@@ -21,6 +21,7 @@ import { triggerConfetti } from "../components/Animation/Confetti";
 import { vaultService } from "../services/vaultService";
 import { GeneratorOptions, PasswordStrength } from "../types";
 import { scorePasswordStrength, strengthColor } from "../utils/passwordStrength";
+import { generateSecurePassword, generateSecurePassphrase, scoreEntropyStrength } from "../utils/cryptoGenerator";
 import { useToast } from "../hooks/useToast";
 
 const defaultOptions: GeneratorOptions = {
@@ -31,13 +32,6 @@ const defaultOptions: GeneratorOptions = {
   symbols: true,
   excludeSimilar: false,
 };
-
-const WORD_LIST = [
-  "quantum", "cipher", "matrix", "shield", "proton", "secure", "vertex", "crypto",
-  "nebula", "vault", "anchor", "cosmic", "beacon", "dynamo", "falcon", "glacier",
-  "horizon", "island", "jungle", "meteor", "orbit", "phoenix", "shadow", "timber",
-  "zenith", "aurora", "breeze", "canyon", "desert", "ember", "forest", "galaxy"
-];
 
 export default function PasswordGenerator() {
   const [options, setOptions] = useState<GeneratorOptions>(defaultOptions);
@@ -53,30 +47,10 @@ export default function PasswordGenerator() {
     setLoading(true);
     setCopied(false);
     try {
-      let pwd = "";
-      let str: PasswordStrength | null = null;
-      try {
-        const result = await vaultService.generatePassword(opts);
-        pwd = result.password;
-        str = result.strength;
-      } catch {
-        // Fallback local generator if backend not connected
-        let chars = "";
-        if (opts.uppercase) chars += "ABCDEFGHJKLMNPQRSTUVWXYZ";
-        if (opts.lowercase) chars += "abcdefghijkmnpqrstuvwxyz";
-        if (opts.numbers) chars += "23456789";
-        if (opts.symbols) chars += "!@#$%^&*()_+-=[]{}|";
-        if (!chars) chars = "abcdefghijkmnpqrstuvwxyz";
-
-        for (let i = 0; i < opts.length; i++) {
-          pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        str = scorePasswordStrength(pwd);
-      }
-
-      setPassword(pwd);
-      setStrength(str || scorePasswordStrength(pwd));
-      setHistory((prev) => [pwd, ...prev.filter((p) => p !== pwd)].slice(0, 6));
+      const result = await vaultService.generatePassword(opts);
+      setPassword(result.password);
+      setStrength(result.strength);
+      setHistory((prev) => [result.password, ...prev.filter((p) => p !== result.password)].slice(0, 6));
     } finally {
       setLoading(false);
     }
@@ -111,15 +85,9 @@ export default function PasswordGenerator() {
     } else if (preset === "PIN Code") {
       newOpts = { length: 8, uppercase: false, lowercase: false, numbers: true, symbols: false, excludeSimilar: false };
     } else if (preset === "Passphrase") {
-      // Generate 4-word passphrase
-      const words = [];
-      for (let i = 0; i < 4; i++) {
-        words.push(WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)]);
-      }
-      const num = Math.floor(Math.random() * 90 + 10);
-      const passphrase = words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join("-") + "!" + num;
+      const { passphrase, bits } = generateSecurePassphrase(4, true);
       setPassword(passphrase);
-      setStrength({ score: 4, label: "Very Strong" });
+      setStrength(scoreEntropyStrength(bits));
       setHistory((prev) => [passphrase, ...prev.filter((p) => p !== passphrase)].slice(0, 6));
       return;
     }
@@ -134,15 +102,16 @@ export default function PasswordGenerator() {
     generate(updated);
   };
 
-  // Estimate crack time
+  // Estimate crack time based on length & entropy
   const getCrackTime = (pwd: string) => {
     if (!pwd) return "Instant";
     const len = pwd.length;
-    if (len < 8) return "A few seconds";
-    if (len < 12) return "3 hours";
-    if (len < 16) return "4,000 years";
-    if (len < 20) return "500 million years";
-    return "340 Trillion Years";
+    if (len < 8) return "Instant";
+    if (len < 12) return "A few seconds to minutes";
+    if (len < 16) return "Several days";
+    if (len < 20) return "Thousands of years";
+    if (len < 24) return "Millions of years";
+    return "Centuries of brute-force resistance";
   };
 
   return (

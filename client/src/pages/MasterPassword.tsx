@@ -9,6 +9,7 @@ import { useVaultUnlock } from "../hooks/useVaultUnlock";
 import { AuthShell } from "./Register";
 import { scorePasswordStrength, strengthColor } from "../utils/passwordStrength";
 import { triggerConfetti } from "../components/Animation/Confetti";
+import { deriveAuthHash } from "../utils/crypto";
 
 export default function MasterPassword() {
   const [password, setPassword] = useState("");
@@ -45,7 +46,14 @@ export default function MasterPassword() {
 
     setLoading(true);
     try {
-      await authService.createMasterPassword(password);
+      const user = await authService.me();
+      let salt = user.salt;
+      if (!salt) {
+        const rand = window.crypto.getRandomValues(new Uint8Array(16));
+        salt = Array.from(rand, (b) => b.toString(16).padStart(2, "0")).join("");
+      }
+      const authHash = await deriveAuthHash(password, salt);
+      await authService.createMasterPassword(authHash, salt);
       await refreshUser();
       await unlock(password);
       triggerConfetti();

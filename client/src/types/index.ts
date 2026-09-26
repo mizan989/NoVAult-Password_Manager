@@ -4,6 +4,7 @@ export interface User {
   email: string;
   provider?: "email" | "google" | "both";
   hasMasterPassword: boolean;
+  salt?: string;
 }
 
 export type VaultItemType = "password" | "note" | "card" | "identity" | "apikey";

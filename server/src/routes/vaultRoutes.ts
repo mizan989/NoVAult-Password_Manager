@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth, requireVaultUnlock } from "../middleware/auth";
+import { requireAuth } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import {
   listVaultItems,
@@ -13,7 +13,7 @@ import {
 
 const router = Router();
 
-router.use(requireAuth, requireVaultUnlock);
+router.use(requireAuth);
 
 router.get("/", listVaultItems);
 router.get("/search", searchVaultItems);

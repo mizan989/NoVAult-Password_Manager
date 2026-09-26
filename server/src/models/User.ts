@@ -12,6 +12,7 @@ export interface IUser extends Document {
   masterPasswordSalt?: string; // salt used for deriving the AES key from master password
   isEmailVerified: boolean;
   hasMasterPassword: boolean;
+  tokenVersion: number;
   createdAt: Date;
   lastLogin?: Date;
 }
@@ -27,6 +28,7 @@ const UserSchema = new Schema<IUser>(
     masterPasswordSalt: { type: String, select: false },
     isEmailVerified: { type: Boolean, default: false },
     hasMasterPassword: { type: Boolean, default: false },
+    tokenVersion: { type: Number, default: 0 },
     lastLogin: { type: Date },
   },
   { timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" } }

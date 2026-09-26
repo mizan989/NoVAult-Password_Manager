@@ -49,13 +49,13 @@ export const authService = {
     }
   },
 
-  async createMasterPassword(masterPassword: string) {
-    const { data } = await api.post("/auth/master-password", { masterPassword });
-    return data.data as { hasMasterPassword: boolean };
+  async createMasterPassword(authHash: string, salt?: string) {
+    const { data } = await api.post("/auth/master-password", { authHash, salt });
+    return data.data as { hasMasterPassword: boolean; salt?: string };
   },
 
-  async verifyMasterPassword(masterPassword: string) {
-    const { data } = await api.post("/auth/master-password/verify", { masterPassword });
+  async verifyMasterPassword(authHash: string) {
+    const { data } = await api.post("/auth/master-password/verify", { authHash });
     return data.data as { unlocked: boolean };
   },
 };

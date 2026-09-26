@@ -66,14 +66,6 @@ export default function AddVaultItemModal({
         excludeSimilar: false,
       });
       setPassword(result.password);
-    } catch {
-      // fallback
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*";
-      let pwd = "";
-      for (let i = 0; i < 18; i++) {
-        pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      setPassword(pwd);
     } finally {
       setGenerating(false);
     }

@@ -8,7 +8,6 @@ import {
   Wand2,
   Settings,
   ChevronRight,
-  ShieldCheck,
   Lock,
 } from "lucide-react";
 import { useVaultUnlock } from "../../hooks/useVaultUnlock";
@@ -37,9 +36,11 @@ export default function Sidebar() {
       <div>
         {/* Brand Logo */}
         <div className="mb-8 flex items-center gap-3 px-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100 shadow-sm">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="NoVAult Logo"
+            className="h-9 w-9 shrink-0 rounded-xl object-contain shadow-sm"
+          />
           <AnimatePresence>
             {expanded && (
               <motion.div

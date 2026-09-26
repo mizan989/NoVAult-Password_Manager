@@ -93,10 +93,12 @@ export function AuthShell({
       <div className="w-full max-w-md my-auto">
         {/* Brand Header */}
         <div className="text-center mb-4">
-          <Link to="/" className="inline-flex items-center gap-2 mb-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100 shadow-sm">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
+          <Link to="/" className="inline-flex items-center gap-2.5 mb-2">
+            <img
+              src="/logo.png"
+              alt="NoVAult Logo"
+              className="h-9 w-9 rounded-xl object-contain shadow-sm"
+            />
             <span className="font-heading text-lg font-bold tracking-tight text-slate-900">
               No<span className="text-vault-accent">VA</span>ult
             </span>

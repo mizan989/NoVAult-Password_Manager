@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ShieldCheck, Lock, ArrowRight, Github, Instagram, Linkedin } from "lucide-react";
+import { Lock, ArrowRight, Github, Instagram, Linkedin } from "lucide-react";
 import HeroSection from "../components/Landing/HeroSection";
 import CryptoSimulator from "../components/Landing/CryptoSimulator";
 import BentoFeatures from "../components/Landing/BentoFeatures";
@@ -13,9 +13,11 @@ export default function Landing() {
       <header className="fixed top-0 left-0 right-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100 shadow-sm">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="NoVAult Logo"
+              className="h-9 w-9 rounded-xl object-contain shadow-sm"
+            />
             <span className="font-heading text-lg font-bold tracking-tight text-slate-900">
               No<span className="text-vault-accent">VA</span>ult
             </span>
@@ -102,9 +104,11 @@ export default function Landing() {
             {/* Brand & Bio */}
             <div className="md:col-span-5 space-y-3">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100 shadow-sm">
-                  <ShieldCheck className="h-4 w-4" />
-                </div>
+                <img
+                  src="/logo.png"
+                  alt="NoVAult Logo"
+                  className="h-8 w-8 rounded-xl object-contain shadow-sm"
+                />
                 <span className="font-heading text-lg font-bold tracking-tight text-slate-900">
                   No<span className="text-vault-accent">VA</span>ult
                 </span>

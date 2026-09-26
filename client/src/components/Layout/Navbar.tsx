@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { Search, LogOut, Lock, Plus, Command } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useVaultUnlock } from "../../hooks/useVaultUnlock";
@@ -36,6 +37,9 @@ export default function Navbar({ onOpenCommandPalette, onOpenAddModal }: NavbarP
     <header className="sticky top-0 z-20 flex items-center justify-between border-b border-vault-border bg-white/90 px-6 py-3.5 backdrop-blur-md shadow-subtle">
       {/* Search Bar / Command Palette Trigger */}
       <div className="flex items-center gap-3">
+        <Link to="/dashboard" className="md:hidden flex items-center shrink-0">
+          <img src="/logo.png" alt="NoVAult Logo" className="h-7 w-7 rounded-lg object-contain shadow-xs" />
+        </Link>
         <button
           onClick={onOpenCommandPalette}
           className="flex items-center gap-2.5 rounded-xl border border-vault-border bg-slate-50/90 px-3.5 py-1.5 text-xs text-slate-500 shadow-subtle hover:bg-slate-100 hover:border-slate-300 transition-all duration-200"

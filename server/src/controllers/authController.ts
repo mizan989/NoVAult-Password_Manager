@@ -49,6 +49,7 @@ export const masterPasswordSchema = z.object({
 
 export const verifyMasterPasswordSchema = z.object({
   authHash: z.string().min(16),
+  masterPassword: z.string().optional(),
 });
 
 export const updateNameSchema = z.object({
@@ -142,7 +143,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
   await user.save();
   await OtpToken.deleteMany({ email, purpose: "register" });
 
-  const { accessToken } = issueSession(res, user.id, user.email, user.tokenVersion || 0);
+  const { accessToken, refreshToken } = issueSession(res, user.id, user.email, user.tokenVersion || 0);
 
   sendSuccess(res, {
     user: {
@@ -153,6 +154,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       salt: user.masterPasswordSalt,
     },
     accessToken,
+    refreshToken,
   }, "Email verified");
 });
 
@@ -178,7 +180,7 @@ export const login = asyncHandler(async (req, res) => {
   user.lastLogin = new Date();
   await user.save();
 
-  const { accessToken } = issueSession(res, user.id, user.email, user.tokenVersion || 0);
+  const { accessToken, refreshToken } = issueSession(res, user.id, user.email, user.tokenVersion || 0);
 
   sendSuccess(res, {
     user: {
@@ -189,6 +191,7 @@ export const login = asyncHandler(async (req, res) => {
       salt: user.masterPasswordSalt,
     },
     accessToken,
+    refreshToken,
   }, "Logged in");
 });
 
@@ -238,7 +241,7 @@ export const googleAuth = asyncHandler(async (req, res) => {
   user.lastLogin = new Date();
   await user.save();
 
-  const { accessToken } = issueSession(res, user.id, user.email, user.tokenVersion || 0);
+  const { accessToken, refreshToken } = issueSession(res, user.id, user.email, user.tokenVersion || 0);
 
   sendSuccess(res, {
     user: {
@@ -249,6 +252,7 @@ export const googleAuth = asyncHandler(async (req, res) => {
       salt: user.masterPasswordSalt,
     },
     accessToken,
+    refreshToken,
   }, "Logged in with Google");
 });
 
@@ -274,13 +278,24 @@ export const createMasterPassword = asyncHandler(async (req: AuthedRequest, res)
 
 /** Verify master password to unlock the vault for this session */
 export const verifyMasterPasswordController = asyncHandler(async (req: AuthedRequest, res) => {
-  const { authHash } = req.body;
+  const { authHash, masterPassword } = req.body;
   const userId = req.user!.userId;
 
   const user = await User.findById(userId).select("+masterPasswordHash +masterPasswordSalt");
   if (!user || !user.masterPasswordHash) throw ApiError.badRequest("Master password not set");
 
-  const valid = await verifyMasterPassword(user.masterPasswordHash, authHash);
+  let valid = await verifyMasterPassword(user.masterPasswordHash, authHash);
+
+  // Backward compatibility: if zero-knowledge check fails and raw masterPassword was sent, check legacy hash & auto-upgrade
+  if (!valid && masterPassword) {
+    const legacyValid = await verifyMasterPassword(user.masterPasswordHash, masterPassword);
+    if (legacyValid) {
+      user.masterPasswordHash = await hashMasterPassword(authHash);
+      await user.save();
+      valid = true;
+    }
+  }
+
   if (!valid) throw ApiError.unauthorized("Incorrect master password");
 
   sendSuccess(res, { unlocked: true }, "Vault unlocked");
@@ -325,10 +340,11 @@ export const refresh = asyncHandler(async (req, res) => {
   user.tokenVersion = (user.tokenVersion || 0) + 1;
   await user.save();
 
-  const { accessToken } = issueSession(res, user.id, user.email, user.tokenVersion);
+  const { accessToken, refreshToken: newRefreshToken } = issueSession(res, user.id, user.email, user.tokenVersion);
 
   sendSuccess(res, {
     accessToken,
+    refreshToken: newRefreshToken,
     user: {
       id: user.id,
       name: user.name,

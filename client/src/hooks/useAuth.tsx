@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { authService } from "../services/authService";
-import { api, getAuthToken, setAuthToken } from "../services/api";
+import { api, getAuthToken, getRefreshToken, setAuthToken } from "../services/api";
 import { User } from "../types";
 
 interface AuthContextValue {
@@ -20,9 +20,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       if (!getAuthToken()) {
         try {
-          const { data } = await api.post("/auth/refresh");
+          const fallbackToken = getRefreshToken();
+          const { data } = await api.post("/auth/refresh", {
+            refreshToken: fallbackToken || undefined,
+          });
           if (data.data?.accessToken) {
-            setAuthToken(data.data.accessToken);
+            setAuthToken(data.data.accessToken, data.data.refreshToken);
           }
         } catch {
           // No active refresh session

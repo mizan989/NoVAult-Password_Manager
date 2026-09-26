@@ -10,25 +10,25 @@ export const authService = {
   async verifyOtp(email: string, code: string) {
     const { data } = await api.post("/auth/verify-otp", { email, code });
     if (data.data?.accessToken) {
-      setAuthToken(data.data.accessToken);
+      setAuthToken(data.data.accessToken, data.data.refreshToken);
     }
-    return data.data as { user: User; accessToken?: string };
+    return data.data as { user: User; accessToken?: string; refreshToken?: string };
   },
 
   async login(email: string, password: string) {
     const { data } = await api.post("/auth/login", { email, password });
     if (data.data?.accessToken) {
-      setAuthToken(data.data.accessToken);
+      setAuthToken(data.data.accessToken, data.data.refreshToken);
     }
-    return data.data as { user: User; accessToken?: string };
+    return data.data as { user: User; accessToken?: string; refreshToken?: string };
   },
 
   async googleAuth(idToken: string) {
     const { data } = await api.post("/auth/google", { idToken });
     if (data.data?.accessToken) {
-      setAuthToken(data.data.accessToken);
+      setAuthToken(data.data.accessToken, data.data.refreshToken);
     }
-    return data.data as { user: User; accessToken?: string };
+    return data.data as { user: User; accessToken?: string; refreshToken?: string };
   },
 
   async me() {
@@ -45,7 +45,7 @@ export const authService = {
     try {
       await api.post("/auth/logout");
     } finally {
-      setAuthToken(null);
+      setAuthToken(null, null);
     }
   },
 
@@ -54,8 +54,8 @@ export const authService = {
     return data.data as { hasMasterPassword: boolean; salt?: string };
   },
 
-  async verifyMasterPassword(authHash: string) {
-    const { data } = await api.post("/auth/master-password/verify", { authHash });
+  async verifyMasterPassword(authHash: string, masterPassword?: string) {
+    const { data } = await api.post("/auth/master-password/verify", { authHash, masterPassword });
     return data.data as { unlocked: boolean };
   },
 };

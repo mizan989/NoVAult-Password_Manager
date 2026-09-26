@@ -25,7 +25,7 @@ export function VaultUnlockProvider({ children }: { children: React.ReactNode })
     }
 
     const authHash = await deriveAuthHash(masterPassword, user.salt);
-    await authService.verifyMasterPassword(authHash);
+    await authService.verifyMasterPassword(authHash, masterPassword);
 
     const masterKey = await deriveMasterKey(masterPassword, user.salt);
     setActiveCryptoKey(masterKey);

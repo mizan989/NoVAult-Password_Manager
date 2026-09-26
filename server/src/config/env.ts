@@ -53,4 +53,6 @@ if (env.isProd) {
       throw new Error(`[NoVAult Security] ${item.key} must be configured with a secure value in production.`);
     }
   }
+} else if (env.encryptionPepper === "0000000000000000000000000000000000000000000000000000000000") {
+  console.warn("[NoVAult Security Warning] Using default ENCRYPTION_PEPPER in development. Set ENCRYPTION_PEPPER in .env before deploying.");
 }

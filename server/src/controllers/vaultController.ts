@@ -29,6 +29,10 @@ const keyCache = new Map<string, { key: Buffer; expiresAt: number }>();
 
 /** Derive the user's AES key after verifying the master password against stored hash. */
 async function getEncryptionKey(userId: string, masterPassword: string): Promise<Buffer> {
+  if (!masterPassword || typeof masterPassword !== "string") {
+    throw ApiError.unauthorized("Vault is locked - master password required");
+  }
+
   const cacheKey = `${userId}:${crypto.createHash("sha256").update(masterPassword).digest("hex")}`;
   const cached = keyCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
@@ -52,7 +56,10 @@ async function getEncryptionKey(userId: string, masterPassword: string): Promise
   if (keyCache.size > 500) {
     const now = Date.now();
     for (const [k, v] of keyCache.entries()) {
-      if (v.expiresAt <= now) keyCache.delete(k);
+      if (v.expiresAt <= now) {
+        v.key.fill(0);
+        keyCache.delete(k);
+      }
     }
   }
 
@@ -60,15 +67,16 @@ async function getEncryptionKey(userId: string, masterPassword: string): Promise
 }
 
 function decryptItem(item: any, key: Buffer) {
-  const json = decrypt(
-    { ciphertext: item.ciphertext, iv: item.iv, authTag: item.authTag },
-    key
-  );
   let parsedData = {};
   try {
+    const json = decrypt(
+      { ciphertext: item.ciphertext, iv: item.iv, authTag: item.authTag },
+      key
+    );
     parsedData = JSON.parse(json);
   } catch (err) {
-    console.error(`[NoVAult] Corrupted JSON data in vault item ${item._id}`);
+    console.error(`[NoVAult] Decryption failed for item ${item._id}:`, err);
+    parsedData = { title: "Encrypted Item (Corrupted)", error: true };
   }
 
   return {
@@ -91,13 +99,7 @@ export const listVaultItems = asyncHandler(async (req: AuthedRequest, res: Respo
   if (type) filter.type = type;
 
   const items = await Vault.find(filter).sort({ updatedAt: -1 });
-
-  let decrypted;
-  try {
-    decrypted = items.map((item) => decryptItem(item, key));
-  } catch {
-    throw ApiError.unauthorized("Incorrect master password");
-  }
+  const decrypted = items.map((item) => decryptItem(item, key));
 
   sendSuccess(res, decrypted);
 });
@@ -108,13 +110,7 @@ export const searchVaultItems = asyncHandler(async (req: AuthedRequest, res: Res
   const query = ((req.query.q as string) || "").toLowerCase();
 
   const items = await Vault.find({ userId: req.user!.userId });
-
-  let decrypted;
-  try {
-    decrypted = items.map((item) => decryptItem(item, key));
-  } catch {
-    throw ApiError.unauthorized("Incorrect master password");
-  }
+  const decrypted = items.map((item) => decryptItem(item, key));
 
   // Search happens after decryption, in-memory, per request - never indexed server-side
   const results = decrypted.filter((item) => {
@@ -195,4 +191,20 @@ export const deleteVaultItem = asyncHandler(async (req: AuthedRequest, res: Resp
   if (!item) throw ApiError.notFound("Vault item not found");
 
   sendSuccess(res, null, "Item deleted");
+});
+
+/** Zero-out and remove derived AES keys from server memory for a user */
+export function purgeUserKeyCache(userId: string) {
+  for (const [k, v] of keyCache.entries()) {
+    if (k.startsWith(`${userId}:`)) {
+      v.key.fill(0);
+      keyCache.delete(k);
+    }
+  }
+}
+
+/** Explicitly lock vault and purge RAM key cache */
+export const lockVault = asyncHandler(async (req: AuthedRequest, res: Response) => {
+  purgeUserKeyCache(req.user!.userId);
+  sendSuccess(res, null, "Vault locked");
 });

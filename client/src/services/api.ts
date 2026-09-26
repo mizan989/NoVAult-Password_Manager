@@ -1,6 +1,7 @@
 import axios from "axios";
 
 const TOKEN_KEY = "novault_access_token";
+const REFRESH_TOKEN_KEY = "novault_refresh_token";
 
 export function getAuthToken(): string | null {
   try {
@@ -10,7 +11,15 @@ export function getAuthToken(): string | null {
   }
 }
 
-export function setAuthToken(token: string | null) {
+export function getRefreshToken(): string | null {
+  try {
+    return localStorage.getItem(REFRESH_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setAuthToken(token: string | null, refreshToken?: string | null) {
   try {
     if (token) {
       localStorage.setItem(TOKEN_KEY, token);
@@ -18,6 +27,14 @@ export function setAuthToken(token: string | null) {
     } else {
       localStorage.removeItem(TOKEN_KEY);
       delete api.defaults.headers.common["Authorization"];
+    }
+
+    if (refreshToken !== undefined) {
+      if (refreshToken) {
+        localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      } else {
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
+      }
     }
   } catch {
     // Ignore localStorage errors in private mode
@@ -65,6 +82,7 @@ const PUBLIC_AUTH_ROUTES = [
   "/auth/google",
   "/auth/refresh",
   "/auth/logout",
+  "/auth/master-password",
 ];
 
 // Auto-refresh the access token once on a 401 for authenticated requests only.
@@ -79,9 +97,15 @@ api.interceptors.response.use(
       originalRequest.url?.includes(route)
     );
 
-    // If it's a login/register/google attempt that failed with 401, or there's no stored token,
-    // do not attempt refresh or redirect — let the UI handle the error.
-    if (isPublicAuthRoute || !getAuthToken()) {
+    const errorMessage = error.response?.data?.message;
+    const isMasterPasswordError =
+      typeof errorMessage === "string" &&
+      (errorMessage.toLowerCase().includes("master password") ||
+        errorMessage.toLowerCase().includes("vault is locked"));
+
+    // If it's a login/register/google/master-password attempt that failed with 401,
+    // or there's no stored token, or it's a master password error, do not attempt token refresh.
+    if (isPublicAuthRoute || !getAuthToken() || isMasterPasswordError) {
       return Promise.reject(error);
     }
 
@@ -89,17 +113,20 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
       try {
-        const { data } = await api.post("/auth/refresh");
+        const fallbackRefreshToken = getRefreshToken();
+        const { data } = await api.post("/auth/refresh", {
+          refreshToken: fallbackRefreshToken || undefined,
+        });
         if (data.data?.accessToken) {
-          setAuthToken(data.data.accessToken);
+          setAuthToken(data.data.accessToken, data.data.refreshToken);
           originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
         }
         isRefreshing = false;
         return api(originalRequest);
       } catch (refreshError) {
         isRefreshing = false;
-        setAuthToken(null);
-        return Promise.reject(refreshError);
+        setAuthToken(null, null);
+        return Promise.reject(error);
       }
     }
     return Promise.reject(error);

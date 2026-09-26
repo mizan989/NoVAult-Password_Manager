@@ -17,6 +17,7 @@ import { sendSuccess } from "../utils/ApiResponse";
 import { asyncHandler } from "../utils/asyncHandler";
 import { env } from "../config/env";
 import { AuthedRequest } from "../middleware/auth";
+import { purgeUserKeyCache } from "./vaultController";
 
 const googleClient = new OAuth2Client(env.googleClientId);
 
@@ -54,9 +55,9 @@ export const updateNameSchema = z.object({
 });
 
 // ---------- Helpers ----------
-function issueSession(res: Response, userId: string, email: string) {
+function issueSession(res: Response, userId: string, email: string, tokenVersion: number = 0) {
   const accessToken = signAccessToken({ userId, email });
-  const refreshToken = signRefreshToken({ userId, email });
+  const refreshToken = signRefreshToken({ userId, email, tokenVersion });
 
   res.cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
   res.cookie("refreshToken", refreshToken, {
@@ -136,11 +137,12 @@ export const verifyOtp = asyncHandler(async (req, res) => {
   await user.save();
   await OtpToken.deleteMany({ email, purpose: "register" });
 
-  const { accessToken } = issueSession(res, user.id, user.email);
+  const { accessToken, refreshToken } = issueSession(res, user.id, user.email, user.tokenVersion || 0);
 
   sendSuccess(res, {
     user: { id: user.id, name: user.name, email: user.email, hasMasterPassword: user.hasMasterPassword },
     accessToken,
+    refreshToken,
   }, "Email verified");
 });
 
@@ -163,11 +165,12 @@ export const login = asyncHandler(async (req, res) => {
   user.lastLogin = new Date();
   await user.save();
 
-  const { accessToken } = issueSession(res, user.id, user.email);
+  const { accessToken, refreshToken } = issueSession(res, user.id, user.email, user.tokenVersion || 0);
 
   sendSuccess(res, {
     user: { id: user.id, name: user.name, email: user.email, hasMasterPassword: user.hasMasterPassword },
     accessToken,
+    refreshToken,
   }, "Logged in");
 });
 
@@ -214,11 +217,12 @@ export const googleAuth = asyncHandler(async (req, res) => {
   user.lastLogin = new Date();
   await user.save();
 
-  const { accessToken } = issueSession(res, user.id, user.email);
+  const { accessToken, refreshToken } = issueSession(res, user.id, user.email, user.tokenVersion || 0);
 
   sendSuccess(res, {
     user: { id: user.id, name: user.name, email: user.email, hasMasterPassword: user.hasMasterPassword },
     accessToken,
+    refreshToken,
   }, "Logged in with Google");
 });
 
@@ -256,7 +260,26 @@ export const verifyMasterPasswordController = asyncHandler(async (req: AuthedReq
   sendSuccess(res, { unlocked: true }, "Vault unlocked");
 });
 
-export const logout = asyncHandler(async (req, res) => {
+export const logout = asyncHandler(async (req: AuthedRequest, res) => {
+  const token = req.cookies?.refreshToken || req.body?.refreshToken;
+  let userIdToPurge: string | undefined = req.user?.userId;
+
+  if (token) {
+    try {
+      const payload = verifyRefreshToken(token);
+      userIdToPurge = payload.userId;
+      await User.findByIdAndUpdate(payload.userId, { $inc: { tokenVersion: 1 } });
+    } catch {
+      // Ignore if expired or malformed
+    }
+  } else if (userIdToPurge) {
+    await User.findByIdAndUpdate(userIdToPurge, { $inc: { tokenVersion: 1 } });
+  }
+
+  if (userIdToPurge) {
+    purgeUserKeyCache(userIdToPurge);
+  }
+
   res.clearCookie("accessToken", cookieOptions);
   res.clearCookie("refreshToken", cookieOptions);
   sendSuccess(res, null, "Logged out");
@@ -278,9 +301,21 @@ export const refresh = asyncHandler(async (req, res) => {
     throw ApiError.unauthorized("User account no longer exists");
   }
 
-  const { accessToken } = issueSession(res, user.id, user.email);
+  // If token has a version and is older than user's current tokenVersion, reject
+  if (payload.tokenVersion !== undefined && user.tokenVersion !== undefined) {
+    if (payload.tokenVersion < user.tokenVersion) {
+      throw ApiError.unauthorized("Session revoked. Please log in again.");
+    }
+  }
 
-  sendSuccess(res, { accessToken }, "Session refreshed");
+  const { accessToken, refreshToken: newRefreshToken } = issueSession(
+    res,
+    user.id,
+    user.email,
+    user.tokenVersion || 0
+  );
+
+  sendSuccess(res, { accessToken, refreshToken: newRefreshToken }, "Session refreshed");
 });
 
 export const me = asyncHandler(async (req: AuthedRequest, res) => {

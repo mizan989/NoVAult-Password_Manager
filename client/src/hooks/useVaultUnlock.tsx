@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
-import { setVaultUnlockHeader } from "../services/api";
+import { api, setVaultUnlockHeader } from "../services/api";
 import { authService } from "../services/authService";
 
 interface VaultUnlockContextValue {
@@ -27,6 +27,7 @@ export function VaultUnlockProvider({ children }: { children: React.ReactNode })
   const lock = useCallback(() => {
     setVaultUnlockHeader(null);
     setIsUnlocked(false);
+    api.post("/vault/lock").catch(() => {});
   }, []);
 
   return (

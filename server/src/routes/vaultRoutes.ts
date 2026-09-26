@@ -7,11 +7,14 @@ import {
   createVaultItem,
   updateVaultItem,
   deleteVaultItem,
+  lockVault,
   createVaultItemSchema,
   updateVaultItemSchema,
 } from "../controllers/vaultController";
 
 const router = Router();
+
+router.post("/lock", requireAuth, lockVault);
 
 router.use(requireAuth, requireVaultUnlock);
 

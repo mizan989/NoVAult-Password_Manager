@@ -10,25 +10,25 @@ export const authService = {
   async verifyOtp(email: string, code: string) {
     const { data } = await api.post("/auth/verify-otp", { email, code });
     if (data.data?.accessToken) {
-      setAuthToken(data.data.accessToken, data.data.refreshToken);
+      setAuthToken(data.data.accessToken);
     }
-    return data.data as { user: User; accessToken?: string; refreshToken?: string };
+    return data.data as { user: User; accessToken?: string };
   },
 
   async login(email: string, password: string) {
     const { data } = await api.post("/auth/login", { email, password });
     if (data.data?.accessToken) {
-      setAuthToken(data.data.accessToken, data.data.refreshToken);
+      setAuthToken(data.data.accessToken);
     }
-    return data.data as { user: User; accessToken?: string; refreshToken?: string };
+    return data.data as { user: User; accessToken?: string };
   },
 
   async googleAuth(idToken: string) {
     const { data } = await api.post("/auth/google", { idToken });
     if (data.data?.accessToken) {
-      setAuthToken(data.data.accessToken, data.data.refreshToken);
+      setAuthToken(data.data.accessToken);
     }
-    return data.data as { user: User; accessToken?: string; refreshToken?: string };
+    return data.data as { user: User; accessToken?: string };
   },
 
   async me() {
@@ -45,17 +45,17 @@ export const authService = {
     try {
       await api.post("/auth/logout");
     } finally {
-      setAuthToken(null, null);
+      setAuthToken(null);
     }
   },
 
-  async createMasterPassword(authHash: string, salt?: string) {
-    const { data } = await api.post("/auth/master-password", { authHash, salt });
-    return data.data as { hasMasterPassword: boolean; salt?: string };
+  async createMasterPassword(masterPassword: string) {
+    const { data } = await api.post("/auth/master-password", { masterPassword });
+    return data.data as { hasMasterPassword: boolean };
   },
 
-  async verifyMasterPassword(authHash: string, masterPassword?: string) {
-    const { data } = await api.post("/auth/master-password/verify", { authHash, masterPassword });
+  async verifyMasterPassword(masterPassword: string) {
+    const { data } = await api.post("/auth/master-password/verify", { masterPassword });
     return data.data as { unlocked: boolean };
   },
 };

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { authService } from "../services/authService";
-import { api, getAuthToken, getRefreshToken, setAuthToken } from "../services/api";
+import { getAuthToken } from "../services/api";
 import { User } from "../types";
 
 interface AuthContextValue {
@@ -17,20 +17,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
+    const token = getAuthToken();
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
     try {
-      if (!getAuthToken()) {
-        try {
-          const fallbackToken = getRefreshToken();
-          const { data } = await api.post("/auth/refresh", {
-            refreshToken: fallbackToken || undefined,
-          });
-          if (data.data?.accessToken) {
-            setAuthToken(data.data.accessToken, data.data.refreshToken);
-          }
-        } catch {
-          // No active refresh session
-        }
-      }
       const me = await authService.me();
       setUser(me);
     } catch {

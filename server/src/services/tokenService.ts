@@ -6,30 +6,24 @@ export interface AccessTokenPayload {
   email: string;
 }
 
-export interface RefreshTokenPayload {
-  userId: string;
-  email: string;
-  tokenVersion: number;
-}
-
 export function signAccessToken(payload: AccessTokenPayload): string {
-  return jwt.sign(payload, env.jwtAccessSecret, {
-    expiresIn: env.jwtAccessExpires,
-  } as jwt.SignOptions);
-}
+     return jwt.sign(payload, env.jwtAccessSecret, {
+       expiresIn: env.jwtAccessExpires,
+     } as jwt.SignOptions);
+   }
 
-export function signRefreshToken(payload: RefreshTokenPayload): string {
-  return jwt.sign(payload, env.jwtRefreshSecret, {
-    expiresIn: env.jwtRefreshExpires,
-  } as jwt.SignOptions);
-}
+   export function signRefreshToken(payload: AccessTokenPayload): string {
+     return jwt.sign(payload, env.jwtRefreshSecret, {
+       expiresIn: env.jwtRefreshExpires,
+     } as jwt.SignOptions);
+   }
 
 export function verifyAccessToken(token: string): AccessTokenPayload {
   return jwt.verify(token, env.jwtAccessSecret) as AccessTokenPayload;
 }
 
-export function verifyRefreshToken(token: string): RefreshTokenPayload {
-  return jwt.verify(token, env.jwtRefreshSecret) as RefreshTokenPayload;
+export function verifyRefreshToken(token: string): AccessTokenPayload {
+  return jwt.verify(token, env.jwtRefreshSecret) as AccessTokenPayload;
 }
 
 export const cookieOptions = {

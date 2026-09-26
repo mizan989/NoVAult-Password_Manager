@@ -28,9 +28,14 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
 }
 
 /**
- * Deprecated: Vault unlock is strictly client-side in Zero-Knowledge model.
- * Kept as pass-through for backwards compatibility.
+ * Requires the vault-unlock header carrying the derived key context.
+ * The actual AES key is derived per-request from the master password
+ * sent over HTTPS in this header - it is never persisted server-side.
  */
 export function requireVaultUnlock(req: AuthedRequest, res: Response, next: NextFunction) {
+  const masterPassword = req.headers["x-master-password"];
+  if (!masterPassword || typeof masterPassword !== "string") {
+    throw ApiError.unauthorized("Vault is locked - master password required");
+  }
   next();
 }

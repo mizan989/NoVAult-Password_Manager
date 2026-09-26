@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
-import mongoose from "mongoose";
 import { env } from "./config/env";
 import { connectDB } from "./config/db";
 import { generalLimiter } from "./middleware/rateLimiter";
@@ -48,13 +47,7 @@ app.use(cookieParser(env.cookieSecret));
 
 // Health check endpoint (placed before rate limiting so uptime monitors / keep-alive pings are never throttled)
 app.get("/health", (req, res) => {
-  const isDbReady = mongoose.connection.readyState === 1;
-  res.status(isDbReady ? 200 : 503).json({
-    success: isDbReady,
-    message: isDbReady ? "NoVAult API & Database are healthy" : "Database is reconnecting",
-    database: isDbReady ? "connected" : "disconnected",
-    timestamp: new Date(),
-  });
+  res.json({ success: true, message: "NoVAult API is running", timestamp: new Date() });
 });
 
 app.use(generalLimiter);

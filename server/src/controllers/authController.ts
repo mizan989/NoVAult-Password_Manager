@@ -9,7 +9,6 @@ import { hashMasterPassword, verifyMasterPassword, generateSalt } from "../encry
 import {
   signAccessToken,
   signRefreshToken,
-  verifyAccessToken,
   verifyRefreshToken,
   cookieOptions,
 } from "../services/tokenService";
@@ -43,13 +42,11 @@ export const googleAuthSchema = z.object({
 });
 
 export const masterPasswordSchema = z.object({
-  authHash: z.string().min(16),
-  salt: z.string().optional(),
+  masterPassword: z.string().min(10),
 });
 
 export const verifyMasterPasswordSchema = z.object({
-  authHash: z.string().min(16),
-  masterPassword: z.string().optional(),
+  masterPassword: z.string().min(1),
 });
 
 export const updateNameSchema = z.object({
@@ -57,9 +54,9 @@ export const updateNameSchema = z.object({
 });
 
 // ---------- Helpers ----------
-function issueSession(res: Response, userId: string, email: string, tokenVersion: number = 0) {
+function issueSession(res: Response, userId: string, email: string) {
   const accessToken = signAccessToken({ userId, email });
-  const refreshToken = signRefreshToken({ userId, email, tokenVersion });
+  const refreshToken = signRefreshToken({ userId, email });
 
   res.cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
   res.cookie("refreshToken", refreshToken, {
@@ -91,14 +88,10 @@ export const register = asyncHandler(async (req, res) => {
       email,
       provider: "email",
       isEmailVerified: false,
-      masterPasswordSalt: generateSalt(),
     }));
 
   user.name = name;
   user.passwordHash = passwordHash;
-  if (!user.masterPasswordSalt) {
-    user.masterPasswordSalt = generateSalt();
-  }
   await user.save();
 
   const code = generateOtpCode();
@@ -143,18 +136,11 @@ export const verifyOtp = asyncHandler(async (req, res) => {
   await user.save();
   await OtpToken.deleteMany({ email, purpose: "register" });
 
-  const { accessToken, refreshToken } = issueSession(res, user.id, user.email, user.tokenVersion || 0);
+  const { accessToken } = issueSession(res, user.id, user.email);
 
   sendSuccess(res, {
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      hasMasterPassword: user.hasMasterPassword,
-      salt: user.masterPasswordSalt,
-    },
+    user: { id: user.id, name: user.name, email: user.email, hasMasterPassword: user.hasMasterPassword },
     accessToken,
-    refreshToken,
   }, "Email verified");
 });
 
@@ -163,7 +149,7 @@ export const login = asyncHandler(async (req, res) => {
   const password = req.body.password;
   const email = (req.body.email as string).toLowerCase().trim();
 
-  const user = await User.findOne({ email }).select("+passwordHash +masterPasswordSalt");
+  const user = await User.findOne({ email }).select("+passwordHash");
   if (!user || !user.passwordHash) {
     throw ApiError.unauthorized("Invalid email or password");
   }
@@ -174,24 +160,14 @@ export const login = asyncHandler(async (req, res) => {
   const valid = await argon2.verify(user.passwordHash, password);
   if (!valid) throw ApiError.unauthorized("Invalid email or password");
 
-  if (!user.masterPasswordSalt) {
-    user.masterPasswordSalt = generateSalt();
-  }
   user.lastLogin = new Date();
   await user.save();
 
-  const { accessToken, refreshToken } = issueSession(res, user.id, user.email, user.tokenVersion || 0);
+  const { accessToken } = issueSession(res, user.id, user.email);
 
   sendSuccess(res, {
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      hasMasterPassword: user.hasMasterPassword,
-      salt: user.masterPasswordSalt,
-    },
+    user: { id: user.id, name: user.name, email: user.email, hasMasterPassword: user.hasMasterPassword },
     accessToken,
-    refreshToken,
   }, "Logged in");
 });
 
@@ -218,7 +194,7 @@ export const googleAuth = asyncHandler(async (req, res) => {
   if (!payload?.email) throw ApiError.unauthorized("Invalid Google token payload");
 
   const email = payload.email.toLowerCase().trim();
-  let user = await User.findOne({ email }).select("+masterPasswordSalt");
+  let user = await User.findOne({ email });
 
   if (!user) {
     user = await User.create({
@@ -227,90 +203,60 @@ export const googleAuth = asyncHandler(async (req, res) => {
       provider: "google",
       googleId: payload.sub,
       isEmailVerified: true,
-      masterPasswordSalt: generateSalt(),
     });
   } else if (!user.googleId) {
     // Existing email-based account, same email -> link accounts
     user.googleId = payload.sub;
     user.provider = user.provider === "email" ? "both" : "google";
+    await user.save();
   }
 
-  if (!user.masterPasswordSalt) {
-    user.masterPasswordSalt = generateSalt();
-  }
   user.lastLogin = new Date();
   await user.save();
 
-  const { accessToken, refreshToken } = issueSession(res, user.id, user.email, user.tokenVersion || 0);
+  const { accessToken } = issueSession(res, user.id, user.email);
 
   sendSuccess(res, {
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      hasMasterPassword: user.hasMasterPassword,
-      salt: user.masterPasswordSalt,
-    },
+    user: { id: user.id, name: user.name, email: user.email, hasMasterPassword: user.hasMasterPassword },
     accessToken,
-    refreshToken,
   }, "Logged in with Google");
 });
 
 /** Create the vault master password (first time, after signup/login) */
 export const createMasterPassword = asyncHandler(async (req: AuthedRequest, res) => {
-  const { authHash, salt } = req.body;
+  const { masterPassword } = req.body;
   const userId = req.user!.userId;
 
-  const user = await User.findById(userId).select("+masterPasswordHash +masterPasswordSalt");
+  const user = await User.findById(userId);
   if (!user) throw ApiError.notFound("User not found");
   if (user.hasMasterPassword) throw ApiError.conflict("Master password already set");
 
-  const saltToUse = salt || user.masterPasswordSalt || generateSalt();
-  const hash = await hashMasterPassword(authHash);
+  const salt = generateSalt();
+  const hash = await hashMasterPassword(masterPassword);
 
   user.masterPasswordHash = hash;
-  user.masterPasswordSalt = saltToUse;
+  user.masterPasswordSalt = salt;
   user.hasMasterPassword = true;
   await user.save();
 
-  sendSuccess(res, { hasMasterPassword: true, salt: saltToUse }, "Vault created", 201);
+  sendSuccess(res, { hasMasterPassword: true }, "Vault created", 201);
 });
 
 /** Verify master password to unlock the vault for this session */
 export const verifyMasterPasswordController = asyncHandler(async (req: AuthedRequest, res) => {
-  const { authHash, masterPassword } = req.body;
+  const { masterPassword } = req.body;
   const userId = req.user!.userId;
 
-  const user = await User.findById(userId).select("+masterPasswordHash +masterPasswordSalt");
+  const user = await User.findById(userId).select("+masterPasswordHash");
   if (!user || !user.masterPasswordHash) throw ApiError.badRequest("Master password not set");
 
-  let valid = await verifyMasterPassword(user.masterPasswordHash, authHash);
-
-  // Backward compatibility: if zero-knowledge check fails and raw masterPassword was sent, check legacy hash & auto-upgrade
-  if (!valid && masterPassword) {
-    const legacyValid = await verifyMasterPassword(user.masterPasswordHash, masterPassword);
-    if (legacyValid) {
-      user.masterPasswordHash = await hashMasterPassword(authHash);
-      await user.save();
-      valid = true;
-    }
-  }
-
+  const valid = await verifyMasterPassword(user.masterPasswordHash, masterPassword);
   if (!valid) throw ApiError.unauthorized("Incorrect master password");
 
   sendSuccess(res, { unlocked: true }, "Vault unlocked");
 });
 
-export const logout = asyncHandler(async (req: AuthedRequest, res) => {
-  const token = req.cookies?.accessToken || (req.headers.authorization?.toLowerCase().startsWith("bearer ") ? req.headers.authorization.substring(7).trim() : null);
-  if (token) {
-    try {
-      const payload = verifyAccessToken(token);
-      await User.findByIdAndUpdate(payload.userId, { $inc: { tokenVersion: 1 } });
-    } catch {
-      // ignore expired token
-    }
-  }
+export const logout = asyncHandler(async (req, res) => {
   res.clearCookie("accessToken", cookieOptions);
   res.clearCookie("refreshToken", cookieOptions);
   sendSuccess(res, null, "Logged out");
@@ -327,42 +273,19 @@ export const refresh = asyncHandler(async (req, res) => {
     throw ApiError.unauthorized("Invalid or expired refresh token");
   }
 
-  const user = await User.findById(payload.userId).select("+masterPasswordSalt");
+  const user = await User.findById(payload.userId);
   if (!user) {
     throw ApiError.unauthorized("User account no longer exists");
   }
 
-  if (user.tokenVersion !== undefined && payload.tokenVersion !== undefined && user.tokenVersion !== payload.tokenVersion) {
-    throw ApiError.unauthorized("Refresh token has been revoked");
-  }
+  const { accessToken } = issueSession(res, user.id, user.email);
 
-  // Rotate token version on renewal
-  user.tokenVersion = (user.tokenVersion || 0) + 1;
-  await user.save();
-
-  const { accessToken, refreshToken: newRefreshToken } = issueSession(res, user.id, user.email, user.tokenVersion);
-
-  sendSuccess(res, {
-    accessToken,
-    refreshToken: newRefreshToken,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      hasMasterPassword: user.hasMasterPassword,
-      salt: user.masterPasswordSalt,
-    },
-  }, "Session refreshed");
+  sendSuccess(res, { accessToken }, "Session refreshed");
 });
 
 export const me = asyncHandler(async (req: AuthedRequest, res) => {
-  const user = await User.findById(req.user!.userId).select("+masterPasswordSalt");
+  const user = await User.findById(req.user!.userId);
   if (!user) throw ApiError.notFound("User not found");
-
-  if (!user.masterPasswordSalt) {
-    user.masterPasswordSalt = generateSalt();
-    await user.save();
-  }
 
   sendSuccess(res, {
     id: user.id,
@@ -370,7 +293,6 @@ export const me = asyncHandler(async (req: AuthedRequest, res) => {
     email: user.email,
     provider: user.provider,
     hasMasterPassword: user.hasMasterPassword,
-    salt: user.masterPasswordSalt,
   });
 });
 

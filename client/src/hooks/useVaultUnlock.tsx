@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
+import { setVaultUnlockHeader } from "../services/api";
 import { authService } from "../services/authService";
-import { deriveMasterKey, deriveAuthHash, setActiveCryptoKey } from "../utils/crypto";
 
 interface VaultUnlockContextValue {
   isUnlocked: boolean;
@@ -11,29 +11,21 @@ interface VaultUnlockContextValue {
 const VaultUnlockContext = createContext<VaultUnlockContextValue | undefined>(undefined);
 
 /**
- * Holds the derived non-extractable CryptoKey in memory only for the current browser session.
- * Raw master password is never stored or transmitted over network.
- * Closing the tab or calling lock() purges the key immediately.
+ * Holds the master password in memory only (React state), for the current
+ * browser session. Never written to localStorage/sessionStorage/cookies.
+ * Closing the tab or calling lock() clears it immediately.
  */
 export function VaultUnlockProvider({ children }: { children: React.ReactNode }) {
   const [isUnlocked, setIsUnlocked] = useState(false);
 
   const unlock = useCallback(async (masterPassword: string) => {
-    const user = await authService.me();
-    if (!user.salt) {
-      throw new Error("Unable to retrieve vault salt. Please log in again.");
-    }
-
-    const authHash = await deriveAuthHash(masterPassword, user.salt);
-    await authService.verifyMasterPassword(authHash, masterPassword);
-
-    const masterKey = await deriveMasterKey(masterPassword, user.salt);
-    setActiveCryptoKey(masterKey);
+    await authService.verifyMasterPassword(masterPassword);
+    setVaultUnlockHeader(masterPassword);
     setIsUnlocked(true);
   }, []);
 
   const lock = useCallback(() => {
-    setActiveCryptoKey(null);
+    setVaultUnlockHeader(null);
     setIsUnlocked(false);
   }, []);
 

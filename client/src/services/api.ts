@@ -1,31 +1,26 @@
 import axios from "axios";
 
-let inMemoryAccessToken: string | null = null;
+const TOKEN_KEY = "novault_access_token";
 
 export function getAuthToken(): string | null {
-  return inMemoryAccessToken || localStorage.getItem("novault_access_token");
-}
-
-export function getRefreshToken(): string | null {
-  return localStorage.getItem("novault_refresh_token");
-}
-
-export function setAuthToken(token: string | null, refreshToken?: string | null) {
-  inMemoryAccessToken = token;
-  if (token) {
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    localStorage.setItem("novault_access_token", token);
-  } else {
-    delete api.defaults.headers.common["Authorization"];
-    localStorage.removeItem("novault_access_token");
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
   }
+}
 
-  if (refreshToken !== undefined) {
-    if (refreshToken) {
-      localStorage.setItem("novault_refresh_token", refreshToken);
+export function setAuthToken(token: string | null) {
+  try {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     } else {
-      localStorage.removeItem("novault_refresh_token");
+      localStorage.removeItem(TOKEN_KEY);
+      delete api.defaults.headers.common["Authorization"];
     }
+  } catch {
+    // Ignore localStorage errors in private mode
   }
 }
 
@@ -34,14 +29,33 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// Attach Authorization header if token present
+// Initialize Authorization header from existing token
+const initialToken = getAuthToken();
+if (initialToken) {
+  api.defaults.headers.common["Authorization"] = `Bearer ${initialToken}`;
+}
+
+let currentMasterPassword: string | null = null;
+
+// Attach Authorization header and dynamic master password header to requests
 api.interceptors.request.use((config) => {
   const token = getAuthToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Scope master password strictly to vault endpoints to prevent leaking to auth/generator/health
+  if (currentMasterPassword && config.url && config.url.includes("/vault")) {
+    config.headers["x-master-password"] = currentMasterPassword;
+  } else if (config.headers) {
+    delete config.headers["x-master-password"];
+  }
   return config;
 });
+
+// Update the in-memory master password for the current session
+export function setVaultUnlockHeader(masterPassword: string | null) {
+  currentMasterPassword = masterPassword;
+}
 
 // Public endpoints that should never trigger auto-refresh
 const PUBLIC_AUTH_ROUTES = [
@@ -51,11 +65,9 @@ const PUBLIC_AUTH_ROUTES = [
   "/auth/google",
   "/auth/refresh",
   "/auth/logout",
-  "/auth/master-password",
 ];
 
-// Auto-refresh the access token once on a 401 for authenticated requests.
-// Supports both HttpOnly cookies and cross-origin body refresh token fallback.
+// Auto-refresh the access token once on a 401 for authenticated requests only.
 let isRefreshing = false;
 api.interceptors.response.use(
   (res) => res,
@@ -67,7 +79,9 @@ api.interceptors.response.use(
       originalRequest.url?.includes(route)
     );
 
-    if (isPublicAuthRoute) {
+    // If it's a login/register/google attempt that failed with 401, or there's no stored token,
+    // do not attempt refresh or redirect — let the UI handle the error.
+    if (isPublicAuthRoute || !getAuthToken()) {
       return Promise.reject(error);
     }
 
@@ -75,19 +89,16 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
       try {
-        const fallbackRefreshToken = getRefreshToken();
-        const { data } = await api.post("/auth/refresh", {
-          refreshToken: fallbackRefreshToken || undefined,
-        });
+        const { data } = await api.post("/auth/refresh");
         if (data.data?.accessToken) {
-          setAuthToken(data.data.accessToken, data.data.refreshToken);
+          setAuthToken(data.data.accessToken);
           originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
         }
         isRefreshing = false;
         return api(originalRequest);
       } catch (refreshError) {
         isRefreshing = false;
-        setAuthToken(null, null);
+        setAuthToken(null);
         return Promise.reject(refreshError);
       }
     }

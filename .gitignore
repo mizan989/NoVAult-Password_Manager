@@ -8,3 +8,6 @@ build/
 *.tsbuildinfo
 .agents/
 strix_runs/
+AGENTS.md
+GEMINI.md
+

@@ -5,6 +5,7 @@ import HeroSection from "../components/Landing/HeroSection";
 import CryptoSimulator from "../components/Landing/CryptoSimulator";
 import BentoFeatures from "../components/Landing/BentoFeatures";
 import SecurityArchitecture from "../components/Landing/SecurityArchitecture";
+import Logo from "../components/UI/Logo";
 
 export default function Landing() {
   return (
@@ -13,11 +14,7 @@ export default function Landing() {
       <header className="fixed top-0 left-0 right-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <Link to="/" className="flex items-center gap-2.5">
-            <img
-              src="/logo.png"
-              alt="NoVAult Logo"
-              className="h-9 w-9 rounded-xl object-contain shadow-sm"
-            />
+            <Logo className="h-6 w-6 object-contain" />
             <span className="font-heading text-lg font-bold tracking-tight text-slate-900">
               No<span className="text-vault-accent">VA</span>ult
             </span>
@@ -104,11 +101,7 @@ export default function Landing() {
             {/* Brand & Bio */}
             <div className="md:col-span-5 space-y-3">
               <div className="flex items-center gap-2.5">
-                <img
-                  src="/logo.png"
-                  alt="NoVAult Logo"
-                  className="h-8 w-8 rounded-xl object-contain shadow-sm"
-                />
+                <Logo className="h-6 w-6 object-contain" />
                 <span className="font-heading text-lg font-bold tracking-tight text-slate-900">
                   No<span className="text-vault-accent">VA</span>ult
                 </span>

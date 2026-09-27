@@ -11,6 +11,7 @@ import {
   Lock,
 } from "lucide-react";
 import { useVaultUnlock } from "../../hooks/useVaultUnlock";
+import Logo from "../UI/Logo";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutGrid, shortcut: "1" },
@@ -36,11 +37,7 @@ export default function Sidebar() {
       <div>
         {/* Brand Logo */}
         <div className="mb-8 flex items-center gap-3 px-2">
-          <img
-            src="/logo.png"
-            alt="NoVAult Logo"
-            className="h-9 w-9 shrink-0 rounded-xl object-contain shadow-sm"
-          />
+          <Logo className="h-7 w-7 shrink-0 object-contain" />
           <AnimatePresence>
             {expanded && (
               <motion.div

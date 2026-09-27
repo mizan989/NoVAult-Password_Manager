@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ShieldCheck, Lock, AlertCircle } from "lucide-react";
 import SpotlightCard from "../components/Animation/SpotlightCard";
 import GoogleAuthButton from "../components/Auth/GoogleAuthButton";
+import Logo from "../components/UI/Logo";
 
 export default function Register() {
   const [error, setError] = useState("");
@@ -94,11 +95,7 @@ export function AuthShell({
         {/* Brand Header */}
         <div className="text-center mb-4">
           <Link to="/" className="inline-flex items-center gap-2.5 mb-2">
-            <img
-              src="/logo.png"
-              alt="NoVAult Logo"
-              className="h-9 w-9 rounded-xl object-contain shadow-sm"
-            />
+            <Logo className="h-7 w-7 object-contain" />
             <span className="font-heading text-lg font-bold tracking-tight text-slate-900">
               No<span className="text-vault-accent">VA</span>ult
             </span>

@@ -4,6 +4,7 @@ import { Search, LogOut, Lock, Plus, Command } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useVaultUnlock } from "../../hooks/useVaultUnlock";
 import { useToast } from "../../hooks/useToast";
+import Logo from "../UI/Logo";
 
 interface NavbarProps {
   onOpenCommandPalette?: () => void;
@@ -38,7 +39,7 @@ export default function Navbar({ onOpenCommandPalette, onOpenAddModal }: NavbarP
       {/* Search Bar / Command Palette Trigger */}
       <div className="flex items-center gap-3">
         <Link to="/dashboard" className="md:hidden flex items-center shrink-0">
-          <img src="/logo.png" alt="NoVAult Logo" className="h-7 w-7 rounded-lg object-contain shadow-xs" />
+          <Logo className="h-6 w-6 object-contain" />
         </Link>
         <button
           onClick={onOpenCommandPalette}

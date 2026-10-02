@@ -24,6 +24,25 @@ interface Props {
   onToggleFavourite: (item: VaultItem) => void;
 }
 
+function getSafeHttpUrl(rawUrl?: string): string | null {
+  if (!rawUrl || typeof rawUrl !== "string") return null;
+  try {
+    const trimmed = rawUrl.trim();
+    if (!trimmed) return null;
+    const candidate =
+      trimmed.startsWith("http://") || trimmed.startsWith("https://")
+        ? trimmed
+        : `https://${trimmed}`;
+    const parsed = new URL(candidate);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.href;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export default function VaultItemCard({ item, onDelete, onEdit, onToggleFavourite }: Props) {
   const [revealed, setRevealed] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -86,16 +105,18 @@ export default function VaultItemCard({ item, onDelete, onEdit, onToggleFavourit
               </h3>
               {item.data.username ? (
                 <p className="text-xs text-slate-500 line-clamp-1">{item.data.username}</p>
-              ) : item.data.url ? (
+              ) : getSafeHttpUrl(item.data.url) ? (
                 <a
-                  href={item.data.url.startsWith("http") ? item.data.url : `https://${item.data.url}`}
+                  href={getSafeHttpUrl(item.data.url)!}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="flex items-center gap-1 text-[11px] text-blue-600 hover:underline line-clamp-1"
                 >
-                  <span>{item.data.url.replace(/^https?:\/\//, "")}</span>
+                  <span>{String(item.data.url).replace(/^https?:\/\//, "")}</span>
                   <ExternalLink className="h-2.5 w-2.5" />
                 </a>
+              ) : item.data.url ? (
+                <span className="text-[11px] text-slate-500 line-clamp-1">{String(item.data.url)}</span>
               ) : (
                 <span className="text-[11px] text-slate-400">Encrypted record</span>
               )}

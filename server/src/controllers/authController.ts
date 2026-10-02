@@ -1,5 +1,6 @@
 import { Response } from "express";
 import argon2 from "argon2";
+import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { z } from "zod";
 import User from "../models/User";
@@ -9,6 +10,7 @@ import { hashMasterPassword, verifyMasterPassword, generateSalt } from "../encry
 import {
   signAccessToken,
   signRefreshToken,
+  verifyAccessToken,
   verifyRefreshToken,
   cookieOptions,
 } from "../services/tokenService";
@@ -96,6 +98,7 @@ export const register = asyncHandler(async (req, res) => {
   await user.save();
 
   const code = generateOtpCode();
+  await OtpToken.deleteMany({ email, purpose: "register" });
   await OtpToken.create({
     email,
     codeHash: hashOtpCode(code),
@@ -124,7 +127,14 @@ export const verifyOtp = asyncHandler(async (req, res) => {
     throw ApiError.badRequest("Verification code has expired. Please request a new code.");
   }
 
-  if (otp.codeHash !== hashOtpCode(code)) {
+  const computedHash = hashOtpCode(code);
+  const otpHashBuf = Buffer.from(otp.codeHash, "utf8");
+  const compHashBuf = Buffer.from(computedHash, "utf8");
+  const isMatch =
+    otpHashBuf.length === compHashBuf.length &&
+    crypto.timingSafeEqual(otpHashBuf, compHashBuf);
+
+  if (!isMatch) {
     otp.attempts += 1;
     await otp.save();
     throw ApiError.badRequest("Invalid verification code");
@@ -274,6 +284,15 @@ export const logout = asyncHandler(async (req: AuthedRequest, res) => {
     }
   } else if (userIdToPurge) {
     await User.findByIdAndUpdate(userIdToPurge, { $inc: { tokenVersion: 1 } });
+  } else if (req.headers.authorization?.toLowerCase().startsWith("bearer ")) {
+    try {
+      const bearerToken = req.headers.authorization.substring(7).trim();
+      const payload = verifyAccessToken(bearerToken);
+      userIdToPurge = payload.userId;
+      await User.findByIdAndUpdate(payload.userId, { $inc: { tokenVersion: 1 } });
+    } catch {
+      // Ignore if expired or malformed
+    }
   }
 
   if (userIdToPurge) {

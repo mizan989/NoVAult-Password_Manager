@@ -16,3 +16,12 @@ export const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { success: false, message: "Too many auth attempts, please slow down." },
 });
+
+export const generatorLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: env.isProd ? 60 : 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many password generation requests, please slow down." },
+});
+

@@ -282,10 +282,11 @@ NoVAult/
 ├── server/
 │   ├── src/
 │   │   ├── config/            # Database & environment variables
-│   │   ├── controllers/       # authController, vaultController, userController
-│   │   ├── middleware/        # auth, rateLimiter, errorHandler
-│   │   ├── models/            # User.ts, VaultItem.ts
-│   │   ├── routes/            # authRoutes, vaultRoutes, userRoutes
+│   │   ├── controllers/       # authController, vaultController, generatorController
+│   │   ├── middleware/        # auth, rateLimiter, sanitize, errorHandler
+│   │   ├── models/            # User.ts, Vault.ts, OtpToken.ts
+│   │   ├── routes/            # authRoutes, vaultRoutes, generatorRoutes
+│   │   ├── tests/             # Automated securityCheck test suite
 │   │   └── index.ts           # Express server entry point
 │   └── package.json           # Backend dependencies and scripts
 │
@@ -319,12 +320,30 @@ Deploy `server` as a Node Web Service:
 ## Verification & Quality Bar
 
 ```bash
-# Typecheck client TypeScript code
+# Run automated security verification checks
+cd server && npm run test:security
+
+# Typecheck and build client production bundle
 cd client && npm run build
 
-# Typecheck server TypeScript code
+# Typecheck and build server TypeScript code
 cd server && npm run build
 ```
+
+---
+
+## 🛡️ Security Hardening & Defense-in-Depth
+
+NoVAult implements multi-layered security controls to protect vaults and user identities:
+
+- **Constant-Time Verification:** OTP verification uses `crypto.timingSafeEqual` to eliminate character-by-character timing side-channel leaks.
+- **NoSQL Operator Sanitization:** Global recursive `sanitizeInput` middleware strips `$` operators and dot-notation keys from all incoming request bodies, queries, and parameters.
+- **Whitelist Query Validation:** Vault item filtering enforces strict enum checking (`password`, `note`, `card`, `identity`, `apikey`), blocking query object tampering.
+- **Bounded Search Inputs:** Vault search queries are capped at 100 characters to prevent memory exhaustion and CPU pressure.
+- **Granular Rate Limiting:** Separate rate limiting tiers for general requests, authentication routes (`/login`, `/register`, `/refresh`, `/logout`), and CPU-bound operations (`/api/generate-password`).
+- **Zero-Cache Transport:** All sensitive `/api` routes mandate `Cache-Control: no-store, no-cache, must-revalidate, private` and `Pragma: no-cache` so intermediaries never cache decrypted items or tokens.
+- **Hardened HTTP Headers:** Production deployments enforce strict `Content-Security-Policy`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and `HSTS` preloading.
+- **Automated Verification:** Continuous security check suite (`server/src/tests/securityCheck.ts`) testing cryptographic integrity and input validation.
 
 ---
 

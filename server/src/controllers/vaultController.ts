@@ -94,9 +94,14 @@ export const listVaultItems = asyncHandler(async (req: AuthedRequest, res: Respo
   const masterPassword = req.headers["x-master-password"] as string;
   const key = await getEncryptionKey(req.user!.userId, masterPassword);
 
-  const { type } = req.query;
+  const allowedTypes = ["password", "note", "card", "identity", "apikey"];
   const filter: Record<string, unknown> = { userId: req.user!.userId };
-  if (type) filter.type = type;
+  if (req.query.type !== undefined) {
+    if (typeof req.query.type !== "string" || !allowedTypes.includes(req.query.type)) {
+      throw ApiError.badRequest("Invalid item type filter");
+    }
+    filter.type = req.query.type;
+  }
 
   const items = await Vault.find(filter).sort({ updatedAt: -1 });
   const decrypted = items.map((item) => decryptItem(item, key));
@@ -107,7 +112,15 @@ export const listVaultItems = asyncHandler(async (req: AuthedRequest, res: Respo
 export const searchVaultItems = asyncHandler(async (req: AuthedRequest, res: Response) => {
   const masterPassword = req.headers["x-master-password"] as string;
   const key = await getEncryptionKey(req.user!.userId, masterPassword);
-  const query = ((req.query.q as string) || "").toLowerCase();
+
+  if (req.query.q !== undefined && typeof req.query.q !== "string") {
+    throw ApiError.badRequest("Search query must be a string");
+  }
+  const rawQuery = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  if (rawQuery.length > 100) {
+    throw ApiError.badRequest("Search query cannot exceed 100 characters");
+  }
+  const query = rawQuery.toLowerCase();
 
   const items = await Vault.find({ userId: req.user!.userId });
   const decrypted = items.map((item) => decryptItem(item, key));

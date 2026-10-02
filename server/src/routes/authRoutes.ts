@@ -28,8 +28,8 @@ router.post("/register", authLimiter, validate(registerSchema), register);
 router.post("/verify-otp", authLimiter, validate(verifyOtpSchema), verifyOtp);
 router.post("/login", authLimiter, validate(loginSchema), login);
 router.post("/google", authLimiter, validate(googleAuthSchema), googleAuth);
-router.post("/logout", logout);
-router.post("/refresh", refresh);
+router.post("/logout", authLimiter, logout);
+router.post("/refresh", authLimiter, refresh);
 router.get("/me", requireAuth, me);
 router.put("/me", requireAuth, validate(updateNameSchema), updateName);
 

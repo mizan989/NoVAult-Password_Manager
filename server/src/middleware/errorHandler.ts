@@ -40,19 +40,21 @@ export function errorHandler(
 
   // Handle Mongoose ValidationError
   if (errorObj?.name === "ValidationError") {
+    const errorDetails = errorObj.errors
+      ? Object.values(errorObj.errors).map((e: any) => e.message)
+      : undefined;
     return res.status(400).json({
       success: false,
-      message: "Database validation failed",
-      details: errorObj.errors,
+      message: "Validation failed",
+      details: env.isProd ? undefined : errorDetails,
     });
   }
 
   // Handle MongoDB Duplicate Key error (E11000)
   if (errorObj?.code === 11000) {
-    const field = Object.keys(errorObj.keyValue || {})[0] || "field";
     return res.status(409).json({
       success: false,
-      message: `An entry with this ${field} already exists`,
+      message: "A resource with these unique credentials or properties already exists",
     });
   }
 

@@ -13,8 +13,8 @@ export default function Landing() {
       {/* Top Floating Glass Navigation Header */}
       <header className="fixed top-0 left-0 right-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-          <Link to="/" className="flex items-center gap-2.5">
-            <Logo className="h-6 w-6 object-contain" />
+          <Link to="/" className="flex items-center gap-2">
+            <Logo className="h-7 w-7 object-contain" />
             <span className="font-heading text-lg font-bold tracking-tight text-slate-900">
               No<span className="text-vault-accent">VA</span>ult
             </span>
@@ -100,8 +100,8 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-10 border-b border-slate-100">
             {/* Brand & Bio */}
             <div className="md:col-span-5 space-y-3">
-              <div className="flex items-center gap-2.5">
-                <Logo className="h-6 w-6 object-contain" />
+              <div className="flex items-center gap-2">
+                <Logo className="h-7 w-7 object-contain" />
                 <span className="font-heading text-lg font-bold tracking-tight text-slate-900">
                   No<span className="text-vault-accent">VA</span>ult
                 </span>

@@ -49,8 +49,8 @@ export default function PrivacyPolicy() {
       {/* Top Floating Glass Navigation Header */}
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-          <Link to="/" className="flex items-center gap-2.5">
-            <Logo className="h-6 w-6 object-contain" />
+          <Link to="/" className="flex items-center gap-2">
+            <Logo className="h-7 w-7 object-contain" />
             <span className="font-heading text-lg font-bold tracking-tight text-slate-900">
               No<span className="text-vault-accent">VA</span>ult
             </span>
@@ -439,7 +439,7 @@ export default function PrivacyPolicy() {
       <footer className="border-t border-slate-200 bg-white py-8 px-6 text-slate-500 text-xs mt-auto">
         <div className="mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Logo className="h-5 w-5 rounded object-contain" />
+            <Logo className="h-5 w-5 object-contain" />
             <span className="font-semibold text-slate-800">NoVAult</span>
             <span className="text-slate-300">•</span>
             <span>Zero-Knowledge Password Manager</span>

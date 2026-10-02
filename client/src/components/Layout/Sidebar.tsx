@@ -36,7 +36,7 @@ export default function Sidebar() {
     >
       <div>
         {/* Brand Logo */}
-        <div className="mb-8 flex items-center gap-3 px-2">
+        <div className="mb-8 flex items-center gap-2.5 px-2">
           <Logo className="h-7 w-7 shrink-0 object-contain" />
           <AnimatePresence>
             {expanded && (

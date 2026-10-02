@@ -49,6 +49,7 @@ The backend API and MongoDB database strictly store encrypted ciphertext, initia
 - **Ephemeral Session Security** — Master keys exist only in volatile RAM during active sessions and are wiped immediately upon auto-lock or logout
 - **Dual-Token Authentication** — Short-lived access JWTs paired with HTTP-only rotating refresh tokens and Google OAuth integration
 - **Curated Apple & Linear-Inspired UX** — Crisp typography, responsive bento layouts, command palette (`⌘K`), and fluid micro-interactions
+- **Privacy-Preserving Self-Hosted Assets** — 100% self-hosted variable WOFF2 fonts and 0ms inlined WebP logo lockup: zero external Google Fonts requests, zero tracking or DNS lookups, and instant first-frame render
 
 <br>
 
@@ -261,15 +262,21 @@ To prevent sleep mode and eliminate cold-start latency, a scheduled GitHub Actio
 NoVAult/
 ├── client/
 │   ├── public/
-│   │   └── logo.png           # Canonical vector-grade application logo & favicon
+│   │   ├── fonts/             # Self-hosted variable WOFF2 fonts (Inter, Space Grotesk, JetBrains Mono)
+│   │   ├── logo.png           # Canonical application logo
+│   │   ├── logo.webp          # High-performance WebP preload asset
+│   │   └── favicon.ico        # Multi-resolution favicon suite (16x16 to 256x256)
 │   ├── src/
 │   │   ├── components/        # Auth, Layout, UI primitives, Landing, Vault modals
+│   │   │   └── UI/Logo.tsx    # Inlined 0ms WebP logo component (zero layout shift)
 │   │   ├── hooks/             # useAuth, useVaultUnlock, useToast
 │   │   ├── pages/             # Landing, Dashboard, Vault, Notes, Generator, Settings
 │   │   ├── services/          # api.ts, authService.ts, vaultService.ts
 │   │   ├── utils/             # crypto.ts (AES-256-GCM + Argon2id), passwordStrength.ts
-│   │   └── types/             # VaultItem, User, Cryptographic payload schemas
-│   ├── index.html             # HTML root with typography & favicon configuration
+│   │   ├── types/             # VaultItem, User, Cryptographic payload schemas
+│   │   ├── fonts.css          # Local @font-face rules mapping self-hosted fonts
+│   │   └── index.css          # Tailwind base & global styling
+│   ├── index.html             # HTML root with local favicon & preload setup
 │   └── vite.config.ts         # Vite bundler setup
 │
 ├── server/
@@ -283,6 +290,7 @@ NoVAult/
 │   └── package.json           # Backend dependencies and scripts
 │
 └── assets/
+    ├── logo.png               # Canonical high-resolution logo asset
     └── screenshot.png         # High-resolution dashboard application preview
 ```
 
@@ -345,6 +353,7 @@ NoVAult is built with gratitude towards the open-source security and developer e
 - [React](https://react.dev/) & [Vite](https://vitejs.dev/) — Lightning-fast frontend tooling and runtime
 - [Tailwind CSS](https://tailwindcss.com/) — Utility-first aesthetic styling engine
 - [Lucide Icons](https://lucide.dev/) — Clean, consistent UI iconography
+- [Inter](https://rsms.me/inter/), [Space Grotesk](https://floriankarsten.github.io/space-grotesk/), & [JetBrains Mono](https://www.jetbrains.com/lp/mono/) — Modern open-source typography self-hosted locally
 - [Argon2id](https://github.com/P-H-C/phc-winner-argon2) & [Web Cryptography API](https://www.w3.org/TR/WebCryptoAPI/) — Battle-tested cryptographic primitives
 - [Express](https://expressjs.com/) & [MongoDB](https://www.mongodb.com/) — Robust backend API and persistence layer
 - [Framer Motion](https://www.framer.com/motion/) — Fluid spring animations and interactive layout transitions

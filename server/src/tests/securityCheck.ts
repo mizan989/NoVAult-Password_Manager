@@ -3,6 +3,8 @@ import crypto from "crypto";
 import { sanitizeInput } from "../middleware/sanitize";
 import { hashOtpCode } from "../services/emailService";
 import { generatePassword, scorePasswordStrength } from "../utils/passwordGenerator";
+import { isTokenVersionCurrent } from "../services/tokenService";
+import { hasVerifiedGoogleEmail } from "../controllers/authController";
 
 console.log("=== Running NoVAult Security Verification Checks ===");
 
@@ -62,8 +64,24 @@ assert.strictEqual(verifyCodeHelper(wrongCode, correctHash), false, "Failed: Wro
 assert.strictEqual(verifyCodeHelper("999999", correctHash), false, "Failed: Wrong OTP passed verification");
 console.log("✓ Timing-safe OTP verification verified successfully.");
 
+// 2b. Check access-token revocation version comparison
+console.log("[2b/6] Testing access-token revocation version comparison...");
+assert.strictEqual(isTokenVersionCurrent(0, 0), true, "Failed: current token was rejected");
+assert.strictEqual(isTokenVersionCurrent(0, 1), false, "Failed: revoked token was accepted");
+assert.strictEqual(isTokenVersionCurrent(undefined, 0), true, "Failed: legacy version-zero token was rejected");
+assert.strictEqual(isTokenVersionCurrent(undefined, 1), false, "Failed: legacy token survived a revocation");
+console.log("✓ Access-token revocation version comparison verified successfully.");
+
+// 2c. Check Google identity linking requires a verified email
+console.log("[2c/7] Testing verified Google email requirement...");
+assert.strictEqual(hasVerifiedGoogleEmail({ email: "user@example.com", email_verified: true }), true);
+assert.strictEqual(hasVerifiedGoogleEmail({ email: "user@example.com", email_verified: false }), false);
+assert.strictEqual(hasVerifiedGoogleEmail({ email: "user@example.com" }), false);
+assert.strictEqual(hasVerifiedGoogleEmail(null), false);
+console.log("✓ Verified Google email requirement verified successfully.");
+
 // 3. Check Vault Item Query Constraints
-console.log("[3/5] Testing vault item query validation constraints...");
+console.log("[3/7] Testing vault item query validation constraints...");
 const allowedTypes = ["password", "note", "card", "identity", "apikey"];
 const isValidType = (t: unknown): boolean => typeof t === "string" && allowedTypes.includes(t);
 
@@ -86,7 +104,7 @@ assert.strictEqual(isValidSearchQuery({ $gt: "" }), false, "Failed: object query
 console.log("✓ Vault item query validation verified successfully.");
 
 // 4. Check Password Generator Cryptographic Randomness & Scoring
-console.log("[4/5] Testing password generator and strength scorer...");
+console.log("[4/7] Testing password generator and strength scorer...");
 const pwd = generatePassword({
   length: 24,
   uppercase: true,
@@ -102,14 +120,18 @@ assert.strictEqual(strength.label, "Very Strong", "Failed: 24-char complex passw
 console.log(`✓ Password generator generated: length ${pwd.length}, strength '${strength.label}'`);
 
 // 5. Check Protected Cryptographic Invariants
-console.log("[5/5] Testing cryptographic primitives integrity...");
+console.log("[5/7] Testing cryptographic primitives integrity...");
 // Verify crypto imports remain intact and functional without altering vault secrets
 const testKey = crypto.randomBytes(32);
-const cipher = crypto.createCipheriv("aes-256-gcm", testKey, crypto.randomBytes(12));
+const iv = crypto.randomBytes(12);
+const cipher = crypto.createCipheriv("aes-256-gcm", testKey, iv);
 const encrypted = Buffer.concat([cipher.update("test-secret", "utf8"), cipher.final()]);
 const tag = cipher.getAuthTag();
-const decipher = crypto.createDecipheriv("aes-256-gcm", testKey, cipher.getAuthTag()); // test decipher initialization
-assert.ok(encrypted.length > 0 && tag.length === 16, "Failed: AES-256-GCM verification failed");
+const decipher = crypto.createDecipheriv("aes-256-gcm", testKey, iv);
+decipher.setAuthTag(tag);
+const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+assert.strictEqual(decrypted, "test-secret", "Failed: AES-256-GCM round trip failed");
+assert.strictEqual(tag.length, 16, "Failed: AES-256-GCM authentication tag length incorrect");
 console.log("✓ AES-256-GCM primitives verified intact.");
 
-console.log("\nALL 5 SECURITY CHECKS PASSED SUCCESSFULLY!");
+console.log("\nALL 7 SECURITY CHECKS PASSED SUCCESSFULLY!");

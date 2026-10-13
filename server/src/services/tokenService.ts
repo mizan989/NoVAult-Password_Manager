@@ -4,6 +4,7 @@ import { env } from "../config/env";
 export interface AccessTokenPayload {
   userId: string;
   email: string;
+  tokenVersion?: number;
 }
 
 export interface RefreshTokenPayload {
@@ -26,6 +27,13 @@ export function signRefreshToken(payload: RefreshTokenPayload): string {
 
 export function verifyAccessToken(token: string): AccessTokenPayload {
   return jwt.verify(token, env.jwtAccessSecret) as AccessTokenPayload;
+}
+
+export function isTokenVersionCurrent(
+  tokenVersion: number | undefined,
+  currentTokenVersion: number | undefined
+): boolean {
+  return (tokenVersion ?? 0) === (currentTokenVersion ?? 0);
 }
 
 export function verifyRefreshToken(token: string): RefreshTokenPayload {

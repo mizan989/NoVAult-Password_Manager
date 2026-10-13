@@ -1,12 +1,13 @@
 import { Request, Response, NextFunction } from "express";
-import { verifyAccessToken } from "../services/tokenService";
+import { isTokenVersionCurrent, verifyAccessToken } from "../services/tokenService";
+import User from "../models/User";
 import { ApiError } from "../utils/ApiError";
 
 export interface AuthedRequest extends Request {
   user?: { userId: string; email: string };
 }
 
-export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
+export async function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
     let token = req.cookies?.accessToken;
@@ -20,6 +21,10 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
     }
 
     const payload = verifyAccessToken(token);
+    const user = await User.findById(payload.userId).select("tokenVersion");
+    if (!user || !isTokenVersionCurrent(payload.tokenVersion, user.tokenVersion)) {
+      throw ApiError.unauthorized("Invalid or expired session");
+    }
     req.user = payload;
     next();
   } catch (err) {

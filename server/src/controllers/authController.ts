@@ -12,6 +12,7 @@ import {
   signRefreshToken,
   verifyAccessToken,
   verifyRefreshToken,
+  isTokenVersionCurrent,
   cookieOptions,
 } from "../services/tokenService";
 import { ApiError } from "../utils/ApiError";
@@ -22,6 +23,12 @@ import { AuthedRequest } from "../middleware/auth";
 import { purgeUserKeyCache } from "./vaultController";
 
 const googleClient = new OAuth2Client(env.googleClientId);
+
+export function hasVerifiedGoogleEmail(
+  payload: { email?: string | null; email_verified?: boolean } | null | undefined
+): payload is { email: string; email_verified: true } {
+  return Boolean(payload?.email) && payload?.email_verified === true;
+}
 
 // ---------- Validation Schemas ----------
 export const registerSchema = z.object({
@@ -58,7 +65,7 @@ export const updateNameSchema = z.object({
 
 // ---------- Helpers ----------
 function issueSession(res: Response, userId: string, email: string, tokenVersion: number = 0) {
-  const accessToken = signAccessToken({ userId, email });
+  const accessToken = signAccessToken({ userId, email, tokenVersion });
   const refreshToken = signRefreshToken({ userId, email, tokenVersion });
 
   res.cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
@@ -204,7 +211,9 @@ export const googleAuth = asyncHandler(async (req, res) => {
   }
 
   const payload = ticket.getPayload();
-  if (!payload?.email) throw ApiError.unauthorized("Invalid Google token payload");
+  if (!hasVerifiedGoogleEmail(payload)) {
+    throw ApiError.unauthorized("Google account must have a verified email address");
+  }
 
   const email = payload.email.toLowerCase().trim();
   let user = await User.findOne({ email });
@@ -320,11 +329,8 @@ export const refresh = asyncHandler(async (req, res) => {
     throw ApiError.unauthorized("User account no longer exists");
   }
 
-  // If token has a version and is older than user's current tokenVersion, reject
-  if (payload.tokenVersion !== undefined && user.tokenVersion !== undefined) {
-    if (payload.tokenVersion < user.tokenVersion) {
-      throw ApiError.unauthorized("Session revoked. Please log in again.");
-    }
+  if (!isTokenVersionCurrent(payload.tokenVersion, user.tokenVersion)) {
+    throw ApiError.unauthorized("Session revoked. Please log in again.");
   }
 
   const { accessToken, refreshToken: newRefreshToken } = issueSession(
